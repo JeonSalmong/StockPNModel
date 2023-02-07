@@ -10,7 +10,6 @@ from konlpy.tag import Okt
 import nltk
 
 import pandas as pd
-from sqlalchemy import create_engine
 import re
 
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
