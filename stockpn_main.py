@@ -53,7 +53,7 @@ class Main():
         # rows = [('CVE', '20230116', '1622', 'Cenovus Energy (CVE) Gains But Lags Market: What You Should Know', 'Cenovus Energy '),
         #         ('AR', '20230116', '1622', 'Antero Resources (AR) Stock Sinks As Market Gains: What You Should Know', 'Antero Resources ')]
         #
-        # print(rows)
+        # logger.info(rows)
         #
         # self.cursor.executemany(
         #     "insert into HDBOWN.prediction_pn_us (ticker, date_, time_, headline, company_name) values (:1, :2, :3, :4, :5)",
@@ -181,7 +181,7 @@ class Main():
             except:
                 continue
 
-        print(self.total_article_us)
+        logger.info(self.total_article_us)
 
     ##### USA NLP #####
     def nlp_article_usa(self):
@@ -206,11 +206,11 @@ class Main():
         # Convert the date column from string to datetime
         # parsed_and_scored_news['date_'] = pd.to_datetime(parsed_and_scored_news.date_).dt.date
 
-        # print(parsed_and_scored_news.info())
+        # logger.info(parsed_and_scored_news.info())
 
         # parsed_and_scored_news = parsed_and_scored_news[columns]
 
-        # print(parsed_and_scored_news.values.tolist())
+        # logger.info(parsed_and_scored_news.values.tolist())
 
         # parsed_and_scored_news.to_sql('prediction_pn_us', schema="HDBOWN", con=self.conn, if_exists='append', index=False)
         self.cursor.executemany("insert into HDBOWN.prediction_pn_us (ticker, date_, time_, headline, company_name, neg, neu, pos, compound) values (:1, :2, :3, :4, :5, :6, :7, :8, :9)", parsed_and_scored_news.values.tolist())
@@ -258,13 +258,13 @@ class Main():
         data = np.expand_dims(np.asarray(tf).astype('float32'), axis=0)
         score = float(self.model.predict(data))
         if (score > 0.5):
-            #print("[{}]는 {:.2f}% 확률로 긍정 리뷰이지 않을까 추측해봅니다.^^\n".format(review, score * 100))
+            #logger.info("[{}]는 {:.2f}% 확률로 긍정 리뷰이지 않을까 추측해봅니다.^^\n".format(review, score * 100))
             result_ratio = ('{:.2f}'.format(score * 100))
             #review 내용이 부정어에 포함되어 있으면 'N'으로 저장
             result_PN = self.apply_rule_keyword('P', review)
             result_list = [result_PN, result_ratio]
         else:
-            #print("[{}]는 {:.2f}% 확률로 부정 리뷰이지 않을까 추측해봅니다.^^;\n".format(review, (1 - score) * 100))
+            #logger.info("[{}]는 {:.2f}% 확률로 부정 리뷰이지 않을까 추측해봅니다.^^;\n".format(review, (1 - score) * 100))
             result_ratio = ('{:.2f}'.format((1 - score) * 100))
             # review 내용이 부정어에 포함되어 있지 않으면 'C'로 저장
             result_PN = self.apply_rule_keyword('N', review)
@@ -314,8 +314,8 @@ class Main():
         for articles in self.total_article:
             for article in articles:
                 selection_stock_df = self.stock_df[self.stock_df['name'].str.contains(self.cleanText(article.split(',')[0]))]
-                #print(article.split(',')[0])
-                #print(selection_stock_df)
+                #logger.info(article.split(',')[0])
+                #logger.info(selection_stock_df)
 
                 if not selection_stock_df.empty:
                     result_list = self.predict_pos_neg(article)
@@ -327,7 +327,7 @@ class Main():
 
                     pn = result_list[0]
                     ratio = result_list[1]
-                    print(stock_code, stock_name, pn, ratio)
+                    logger.info(stock_code, stock_name, pn, ratio)
 
                     stock_info_df = self.get_stock_info_df(stock_code)
                     for i, row in stock_info_df.iterrows():
@@ -356,7 +356,7 @@ class Main():
                     self.stock_data_dict['low'].append(int(low))
                     self.stock_data_dict['volume'].append(int(volume))
 
-                    #print(self.stock_data_dict)
+                    #logger.info(self.stock_data_dict)
 
                     self.get_stock_info_detail_kor(stock_code)
 
@@ -368,7 +368,7 @@ class Main():
         url = 'http://finance.naver.com/item/sise_day.nhn?code={code}&page=1'.format(code=code)
         res = requests.get(url, headers=headers)
         _soap = BeautifulSoup(res.text, 'lxml')
-        # print(_soap)
+        # logger.info(_soap)
         _df = pd.read_html(str(_soap.find("table")), header=0)[0]
         df = _df.dropna()
 
@@ -433,10 +433,10 @@ class Main():
             list_to_np = np_arr[0].tolist()
             C3 = float(list_to_np[0])
             srim_revenue_rate = C3
-            print(srim_revenue_rate)
+            logger.info(srim_revenue_rate)
 
         except Exception as ex:
-            print('에러가 발생 했습니다', ex)
+            logger.info('에러가 발생 했습니다', ex)
 
 
         try:
@@ -455,11 +455,11 @@ class Main():
 
             stxt1_tag = soup.find("span", attrs={"class": "stxt stxt1"})
             ticker_desc1 = stxt1_tag.text
-            print(ticker_desc1)
+            logger.info(ticker_desc1)
 
             stxt2_tag = soup.find("span", attrs={"class": "stxt stxt2"})
             ticker_desc2 = stxt2_tag.text
-            print(ticker_desc2)
+            logger.info(ticker_desc2)
 
             # 시세현황
             table = soup.findAll('table')
@@ -470,27 +470,27 @@ class Main():
             np_arr = df.loc[[1], :].values
             list_to_np = np_arr[0].tolist()
             sise_52_price = str(list_to_np[1])
-            print(sise_52_price)
+            logger.info(sise_52_price)
 
             np_arr = df.loc[[2], :].values
             list_to_np = np_arr[0].tolist()
             sise_revenue_rate = str(list_to_np[1])
-            print(sise_revenue_rate)
+            logger.info(sise_revenue_rate)
 
             np_arr = df.loc[[3], :].values
             list_to_np = np_arr[0].tolist()
             sise_siga_tot = str(format(int(list_to_np[1]), ','))
-            print(sise_siga_tot)
+            logger.info(sise_siga_tot)
 
             np_arr = df.loc[[4], :].values
             list_to_np = np_arr[0].tolist()
             sise_siga_tot2 = str(format(int(list_to_np[1]), ','))
-            print(sise_siga_tot2)
+            logger.info(sise_siga_tot2)
 
             np_arr = df.loc[[6], :].values
             list_to_np = np_arr[0].tolist()
             sise_issue_stock_normal = str(list_to_np[1])
-            print(sise_issue_stock_normal)
+            logger.info(sise_issue_stock_normal)
 
             # 투자의견컨센서스
             table = soup.findAll('table')
@@ -501,48 +501,48 @@ class Main():
             np_arr = df.loc[[0], :].values
             list_to_np = np_arr[0].tolist()
             toja_discision = str(list_to_np[0])
-            print(toja_discision)
+            logger.info(toja_discision)
 
             toja_prop_price = str(format(int(list_to_np[1]), ','))
-            print(toja_prop_price)
+            logger.info(toja_prop_price)
 
             toja_eps = str(format(int(list_to_np[2]), ','))
-            print(toja_eps)
+            logger.info(toja_eps)
 
             toja_per = str(list_to_np[3])
-            print(toja_per)
+            logger.info(toja_per)
 
             toja_comp = str(int(list_to_np[4]))
-            print(toja_comp)
+            logger.info(toja_comp)
 
             # SRIM
             table = soup.findAll('table')
             read_html = str(table[10])
             dfs = pd.read_html(read_html)
             df = dfs[0]
-            # print(df)
+            # logger.info(df)
             # 지배주주 지분(C4) : Annuel 기준 전년도 말 값 (리스트 값 중 3번째 값)
             np_arr = df.loc[[9], :].values
             list_to_np = np_arr[0].tolist()
             C4 = float(list_to_np[4])
             srim_jibea = str(format(float(list_to_np[4]), ','))
-            print(srim_jibea)
+            logger.info(srim_jibea)
 
             # ROA(C5) : Annuel 기준 가장 마지막 값으로 함
             np_arr = df.iloc[[16], 1:5].values
             list_to_np = np_arr[0].tolist()
             ROA = float(list_to_np[-1])
             srim_roa = ROA
-            print(srim_roa)
+            logger.info(srim_roa)
 
             # ROE(C5) : Annuel 기준 가장 마지막 값으로 함
             np_arr = df.iloc[[17], 1:5].values
             list_to_np = np_arr[0].tolist()
-            # print(list_to_np)
+            # logger.info(list_to_np)
             ROE = float(list_to_np[-1])
             C5 = float(list_to_np[-1])
             srim_roe = ROE
-            print(srim_roe)
+            logger.info(srim_roe)
 
             # ROA와 ROE차가 5%이상이면 ROA로 계산함
             RO_Compare = ROE - ROA
@@ -554,7 +554,7 @@ class Main():
             # 기업가치 : (C4+(C4*(C5-C3)/C3))*100000000
             company_value = (C4 + (C4 * (C5 - C3) / C3)) * 100000000
             srim_value = str(format(float(company_value), ','))
-            print(srim_value)
+            logger.info(srim_value)
 
             # 발행주식수
             issue_stock_val = sise_issue_stock_normal.split("/")[0]
@@ -574,12 +574,12 @@ class Main():
             # 발행주식수(보통주) - 자기주식(보통주)수
             ticker_issue_stock_cnt = issue_stock_cnt - self_stock_cnt
             srim_issue_stock = str(format(int(ticker_issue_stock_cnt), ','))
-            print(srim_issue_stock)
+            logger.info(srim_issue_stock)
 
             # 적정가격
             price_hope = company_value / ticker_issue_stock_cnt
             srim_prop_price = str(format(int(price_hope), ','))
-            print(srim_prop_price)
+            logger.info(srim_prop_price)
 
             price_over = C4 * (C5 - C3) / 100
 
@@ -596,10 +596,10 @@ class Main():
             srim_10_price = str(format(int(srim_10_price), ','))
             srim_20_price = str(format(int(srim_20_price), ','))
 
-            print(srim_10_price)
-            print(srim_20_price)
+            logger.info(srim_10_price)
+            logger.info(srim_20_price)
         except Exception as ex:
-            print('에러가 발생 했습니다', ex)
+            logger.info('에러가 발생 했습니다', ex)
 
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
@@ -644,7 +644,7 @@ class Main():
         self.cursor.executemany(
             "insert into HDBOWN.prediction_detail_ko (key_, date_, code_, ticker_desc1, ticker_desc2, sise_52_price, sise_revenue_rate, sise_siga_tot, sise_siga_tot2, sise_issue_stock_normal, toja_discision, toja_prop_price, toja_eps, toja_per, toja_comp, srim_revenue_rate, srim_jibea, srim_roa, srim_roe, srim_value, srim_issue_stock, srim_prop_price, srim_10_price, srim_20_price) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15, :16, :17, :18, :19, :20, :21, :22, :23, :24)", df2.values.tolist())
         self.conn.commit()
-        print('DB저장 완료')
+        logger.info('DB저장 완료')
 
 
 import time, traceback
