@@ -16,7 +16,6 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import logging
 
 import cx_Oracle
-import ads
 
 # 로그 생성
 logger = logging.getLogger()
