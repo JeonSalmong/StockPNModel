@@ -181,7 +181,7 @@ class Main():
             except:
                 continue
 
-        logger.info(self.total_article_us)
+        # logger.info(self.total_article_us)
 
     ##### USA NLP #####
     def nlp_article_usa(self):
