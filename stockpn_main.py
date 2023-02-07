@@ -41,7 +41,9 @@ class Main():
         self.time = datetime.now().strftime('%H%M')
 
         ## Oracle cloud DB
-        cx_Oracle.init_oracle_client(lib_dir=r".\resource\instantclient_19_17")
+        # cx_Oracle.init_oracle_client(lib_dir=r".\resource\instantclient_19_17")
+        cx_Oracle.init_oracle_client(lib_dir="/usr/lib/oracle/21/client64/lib")
+
         self.conn = cx_Oracle.connect(user='HDBOWN', password='Qwer1234!@#$', dsn='ppanggoodoracledb_high')
         self.cursor = self.conn.cursor()
 
