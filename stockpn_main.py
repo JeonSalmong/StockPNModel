@@ -17,6 +17,8 @@ import logging
 
 import cx_Oracle
 
+import openai
+
 # 로그 생성
 logger = logging.getLogger()
 
@@ -31,6 +33,8 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
+YOUR_API_KEY = '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'
+
 class Main():
 
     def __init__(self):
@@ -38,7 +42,7 @@ class Main():
         self.date = datetime.now().strftime('%Y%m%d')
         self.time = datetime.now().strftime('%H%M')
 
-        ## Oracle cloud DB
+        ###################### Oracle cloud DB #############################################################################
         # cx_Oracle.init_oracle_client(lib_dir=r".\resource\instantclient_19_17")
         cx_Oracle.init_oracle_client(lib_dir="/usr/lib/oracle/21/client64/lib")
 
@@ -68,7 +72,7 @@ class Main():
         # self.conn = self.conn.execution_options(autocommit=True)
 
         self.stock_data_dict = {'key': [], 'date': [], 'time': [], 'code': [], 'name': [], 'content': [], 'pn':[], 'ratio':[],
-                         'close': [], 'diff':[], 'open': [], 'high': [], 'low': [], 'volume': []}
+                         'close': [], 'diff':[], 'open': [], 'high': [], 'low': [], 'volume': [], 'gpt_pn': [], 'feed_pn': []}
 
         self.stock_data_detail_dict = {'key': [], 'date': [], 'code': [], 'ticker_desc1': [], 'ticker_desc2':[], 'sise_52_price':[],
                          'sise_revenue_rate': [], 'sise_siga_tot':[], 'sise_siga_tot2': [], 'sise_issue_stock_normal': [], 'toja_discision': [], 'toja_prop_price': [],
@@ -311,6 +315,7 @@ class Main():
         return text
 
     def exec_predict_article(self):
+        pre_article = ''
         for articles in self.total_article:
             for article in articles:
                 selection_stock_df = self.stock_df[self.stock_df['name'].str.contains(self.cleanText(article.split(',')[0]))]
@@ -318,6 +323,21 @@ class Main():
                 #logger.info(selection_stock_df)
 
                 if not selection_stock_df.empty:
+                    article = article.replace('-', '')
+
+                    if pre_article != article:
+                        time.sleep(65.0)  # ChatGPT API 호출 타임
+                        # ChatGPT result
+                        prompt = article + ' 이 문장이 긍정문이야? 부정문이야?'
+                        result_gpt_txt = self.chatGPT(prompt).strip()
+                        result_gpt = result_gpt_txt.find('긍정')
+                        if result_gpt == -1:
+                            self.stock_data_dict['gpt_pn'].append('N')
+                        else:
+                            self.stock_data_dict['gpt_pn'].append('P')
+
+                    pre_article = article
+
                     result_list = self.predict_pos_neg(article)
                     result_stock_df = selection_stock_df.head(1)
 
@@ -327,7 +347,6 @@ class Main():
 
                     pn = result_list[0]
                     ratio = result_list[1]
-                    logger.info(stock_code, stock_name, pn, ratio)
 
                     stock_info_df = self.get_stock_info_df(stock_code)
                     for i, row in stock_info_df.iterrows():
@@ -359,6 +378,27 @@ class Main():
                     #logger.info(self.stock_data_dict)
 
                     self.get_stock_info_detail_kor(stock_code)
+
+    def chatGPT(self, prompt, API_KEY=YOUR_API_KEY):
+        # set api key
+        openai.api_key = API_KEY
+
+        # Call the chat GPT API
+        try:
+            completion = openai.Completion.create(
+                engine='text-davinci-003'  # 'text-curie-001'  # 'text-babbage-001' #'text-ada-001'
+                , prompt=prompt
+                , temperature=0.5
+                , max_tokens=1024
+                , top_p=1
+                , frequency_penalty=0
+                , presence_penalty=0)
+
+            return completion['choices'][0]['text']
+        except Exception as ex:
+            logger.info('ChatGPT 에러가 발생 했습니다')
+            return 'ChatGPT 에러가 발생 했습니다'
+
 
     def get_stock_info_df(self, code):
         date = datetime.now().strftime('%Y.%m.%d')
@@ -436,7 +476,7 @@ class Main():
             logger.info(srim_revenue_rate)
 
         except Exception as ex:
-            logger.info('에러가 발생 했습니다', ex)
+            logger.info('상세1 데이터 에러가 발생 했습니다')
 
 
         try:
@@ -599,7 +639,7 @@ class Main():
             logger.info(srim_10_price)
             logger.info(srim_20_price)
         except Exception as ex:
-            logger.info('에러가 발생 했습니다', ex)
+            logger.info('상세2 데이터 에러가 발생 했습니다')
 
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
@@ -627,12 +667,12 @@ class Main():
         self.stock_data_detail_dict['srim_20_price'].append(str(srim_20_price))
 
     def save_stock_data_to_mysql(self):
-        df = pd.DataFrame(self.stock_data_dict, columns=['key', 'date', 'time', 'code', 'name', 'content', 'pn', 'ratio', 'close', 'diff', 'open', 'high', 'low', 'volume'],
+        df = pd.DataFrame(self.stock_data_dict, columns=['key', 'date', 'time', 'code', 'name', 'content', 'pn', 'ratio', 'close', 'diff', 'open', 'high', 'low', 'volume', 'gpt_pn'],
                           index=self.stock_data_dict['key'])
         # df.to_sql(name='prediction_pn', con=self.engine, if_exists='append', index=False)
 
         self.cursor.executemany(
-            "insert into HDBOWN.prediction_pn (key_, date_, time_, code_, name_, content_, pn_, ratio_, close_, diff_, open_, high_, low_, volume_) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14)", df.values.tolist())
+            "insert into HDBOWN.prediction_pn (key_, date_, time_, code_, name_, content_, pn_, ratio_, close_, diff_, open_, high_, low_, volume_, gpt_pn_) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15)", df.values.tolist())
         self.conn.commit()
 
         df2 = pd.DataFrame(self.stock_data_detail_dict,
