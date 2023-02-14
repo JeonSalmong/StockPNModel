@@ -33,7 +33,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-YOUR_API_KEY = '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'
+YOUR_API_KEY = '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'
 
 class Main():
 
