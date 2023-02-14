@@ -19,6 +19,8 @@ import cx_Oracle
 
 import openai
 
+import cryptocode
+
 # 로그 생성
 logger = logging.getLogger()
 
@@ -33,7 +35,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-YOUR_API_KEY = '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'
+YOUR_API_KEY = '85Qs4r6Sa+pJp5zE/t7g7cOOg84nQ9jSw4I9ncRF4EWdt2o8p+wRv4KIx02uUR053gN4*WNddlDiZ242Rf30v/pT3Ag==*eUD3YPnrpi8gCR0in+RUDg==*+TwdK7nlgA8kOnpP9kZ8Jg=='
 
 class Main():
 
@@ -380,8 +382,10 @@ class Main():
                     self.get_stock_info_detail_kor(stock_code)
 
     def chatGPT(self, prompt, API_KEY=YOUR_API_KEY):
+
+        str_decoded = cryptocode.decrypt(API_KEY, "openai")
         # set api key
-        openai.api_key = API_KEY
+        openai.api_key = str_decoded
 
         # Call the chat GPT API
         try:

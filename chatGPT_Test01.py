@@ -1,12 +1,16 @@
 import openai
 import argparse
 
-YOUR_API_KEY = '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'
+import cryptocode
+
+YOUR_API_KEY = '85Qs4r6Sa+pJp5zE/t7g7cOOg84nQ9jSw4I9ncRF4EWdt2o8p+wRv4KIx02uUR053gN4*WNddlDiZ242Rf30v/pT3Ag==*eUD3YPnrpi8gCR0in+RUDg==*+TwdK7nlgA8kOnpP9kZ8Jg=='
 
 
 def chatGPT(prompt, API_KEY=YOUR_API_KEY):
+
+    str_decoded = cryptocode.decrypt(API_KEY, "openai")
     # set api key
-    openai.api_key = API_KEY
+    openai.api_key = str_decoded
 
     # Call the chat GPT API
     completion = openai.Completion.create(
@@ -27,6 +31,11 @@ def main():
     prompt = '하이브, SM 공개매수 본격화…소액주주 5만2천여명 대상(종합) 이 문장이 긍정문이야? 부정문이야?'
     print(chatGPT(prompt).strip())
 
+    # str_encoded = cryptocode.encrypt("api_key", "openai")
+    # print(str_encoded)
+    # ## And then to decode it:
+    # str_decoded = cryptocode.decrypt(str_encoded, "openai")
+    # print(str_decoded)
 
 if __name__ == '__main__':
     main()
