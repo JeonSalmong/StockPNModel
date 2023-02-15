@@ -74,7 +74,7 @@ class Main():
         # self.conn = self.conn.execution_options(autocommit=True)
 
         self.stock_data_dict = {'key': [], 'date': [], 'time': [], 'code': [], 'name': [], 'content': [], 'pn':[], 'ratio':[],
-                         'close': [], 'diff':[], 'open': [], 'high': [], 'low': [], 'volume': [], 'gpt_pn': [], 'feed_pn': []}
+                         'close': [], 'diff':[], 'open': [], 'high': [], 'low': [], 'volume': [], 'gpt_pn': []}
 
         self.stock_data_detail_dict = {'key': [], 'date': [], 'code': [], 'ticker_desc1': [], 'ticker_desc2':[], 'sise_52_price':[],
                          'sise_revenue_rate': [], 'sise_siga_tot':[], 'sise_siga_tot2': [], 'sise_issue_stock_normal': [], 'toja_discision': [], 'toja_prop_price': [],
@@ -327,6 +327,8 @@ class Main():
                 if not selection_stock_df.empty:
                     article = article.replace('-', '')
 
+                    chatresult = ''
+
                     if pre_article != article:
                         time.sleep(65.0)  # ChatGPT API 호출 타임
                         # ChatGPT result
@@ -334,11 +336,13 @@ class Main():
                         result_gpt_txt = self.chatGPT(prompt).strip()
                         result_gpt = result_gpt_txt.find('긍정')
                         if result_gpt == -1:
-                            self.stock_data_dict['gpt_pn'].append('N')
+                            chatresult = 'N'
                         else:
-                            self.stock_data_dict['gpt_pn'].append('P')
+                            chatresult = 'P'
 
                     pre_article = article
+
+                    self.stock_data_dict['gpt_pn'].append(chatresult)
 
                     result_list = self.predict_pos_neg(article)
                     result_stock_df = selection_stock_df.head(1)
