@@ -344,6 +344,8 @@ class Main():
 
                     self.stock_data_dict['gpt_pn'].append(chatresult)
 
+                    logger.info(f'openai result : {chatresult}')
+
                     result_list = self.predict_pos_neg(article)
                     result_stock_df = selection_stock_df.head(1)
 
