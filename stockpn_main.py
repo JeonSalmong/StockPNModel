@@ -333,12 +333,24 @@ class Main():
                         time.sleep(65.0)  # ChatGPT API 호출 타임
                         # ChatGPT result
                         prompt = article + ' 이 문장이 긍정문이야? 부정문이야?'
+
+                        # 파파고 번역 추가
+                        prompt = self.trans_papago(prompt)
+
                         result_gpt_txt = self.chatGPT(prompt).strip()
-                        result_gpt = result_gpt_txt.find('긍정')
-                        if result_gpt == -1:
-                            chatresult = 'N'
+                        result_gpt = 0
+                        # 결과 값이 영문인지 한글인지 여부 체크
+                        if self.is_korean(result_gpt_txt):
+                            result_gpt = result_gpt_txt.find('부정')
+                        elif self.is_english(result_gpt_txt):
+                            result_gpt = result_gpt_txt.find('negative')
                         else:
+                            result_gpt = -1
+
+                        if result_gpt == -1:
                             chatresult = 'P'
+                        else:
+                            chatresult = 'N'
 
                     pre_article = article
 
@@ -409,6 +421,48 @@ class Main():
             logger.info('ChatGPT 에러가 발생 했습니다')
             return 'ChatGPT 에러가 발생 했습니다'
 
+    def trans_papago(self, content):
+        # 파파고 API URL
+        url = "https://openapi.naver.com/v1/papago/n2mt"
+
+        # 파라미터 설정
+        data = {
+            "source": "ko",
+            "target": "en",
+            "text": content
+        }
+
+        # Header 설정
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Naver-Client-Id": "KOfQjnVLH_96w5zeZOJN",
+            "X-Naver-Client-Secret": "aVDbTdSfVP"
+        }
+
+        try:
+            # POST 요청
+            response = requests.post(url, data=data, headers=headers)
+
+            # 결과 출력
+            result = json.loads(response.text)
+            translated_text = result['message']['result']['translatedText']
+            logger.info(f'파파고 번역 : {translated_text}')
+            return translated_text
+        except Exception as ex:
+            logger.info('파파고 번역시 에러가 발생 했습니다')
+            return content
+
+    def is_korean(self, text):
+        for char in text:
+            if '가' <= char <= '힣':
+                return True
+        return False
+
+    def is_english(self, text):
+        for char in text:
+            if 'a' <= char.lower() <= 'z':
+                return True
+        return False
 
     def get_stock_info_df(self, code):
         date = datetime.now().strftime('%Y.%m.%d')
