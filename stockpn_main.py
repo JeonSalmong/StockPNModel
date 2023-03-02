@@ -502,7 +502,7 @@ class Main():
 
         if result_gpt == -1:
             chatresult = 'P'
-        elif result_gpt == 1:
+        elif result_gpt >= 1:
             chatresult = 'N'
         else:
             chatresult = 'P'

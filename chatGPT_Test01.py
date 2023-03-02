@@ -83,7 +83,7 @@ def get_result_pn(sentence):
 
     if result_gpt == -1:
         chatresult = 'P'
-    elif result_gpt == 1:
+    elif result_gpt >= 1:
         chatresult = 'N'
     else:
         chatresult = 'C'
@@ -95,7 +95,7 @@ def main():
     # prompt = input("Insert a prompt: ")
     # prompt = 'Hi-Mart, up to 50% discount on spring home appliances Is this a positive sentence? Is it a negative sentence?'
     # prompt = "Setopia, Last Year's Sales of KRW 116.5 Billion...51% from the previous year ↑ Is this a positive sentence? Is it a negative sentence?"
-    prompt = 'Dentium, "External growth is now in the beginning stage," but the stock price is strong. Is this a positive sentence? Is it a negative sentence?'
+    prompt = "Deb Sisters' stock price fell 6% despite the release of a new product. Is this a positive sentence? Is it a negative sentence"
     result = chatGPT(prompt).strip()
     print(result)
 
