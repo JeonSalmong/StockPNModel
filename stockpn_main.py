@@ -40,6 +40,10 @@ YOUR_API_KEY = '85Qs4r6Sa+pJp5zE/t7g7cOOg84nQ9jSw4I9ncRF4EWdt2o8p+wRv4KIx02uUR05
 class Main():
 
     def __init__(self):
+        '''
+        초기화
+        '''
+
         # 날짜, 시간, 종목코드, 종목명, content, 긍정or부정, 확률, 종가, 전일비, 시가, 고가, 저가, 거래량
         self.date = datetime.now().strftime('%Y%m%d')
         self.time = datetime.now().strftime('%H%M')
@@ -51,28 +55,6 @@ class Main():
         self.conn = cx_Oracle.connect(user='HDBOWN', password='Qwer1234!@#$', dsn='ppanggoodoracledb_high')
         self.cursor = self.conn.cursor()
 
-        # query = """
-        #         SELECT * FROM HDBOWN.HR_ORG_M
-        # """
-        # df = pd.read_sql(query, self.conn)
-
-        # rows = [('CVE', '20230116', '1622', 'Cenovus Energy (CVE) Gains But Lags Market: What You Should Know', 'Cenovus Energy '),
-        #         ('AR', '20230116', '1622', 'Antero Resources (AR) Stock Sinks As Market Gains: What You Should Know', 'Antero Resources ')]
-        #
-        # logger.info(rows)
-        #
-        # self.cursor.executemany(
-        #     "insert into HDBOWN.prediction_pn_us (ticker, date_, time_, headline, company_name) values (:1, :2, :3, :4, :5)",
-        #     rows)
-        # self.conn.commit()
-
-
-        ## Mysql DB
-        # self.engine = create_engine("mysql+pymysql://itbuser:" + "itbuser!23" + "@35.202.78.12:3306/itbdb?charset=utf8",
-        #                             encoding='utf-8')
-        # self.conn = self.engine.connect()
-        # self.conn = self.conn.execution_options(autocommit=True)
-
         self.stock_data_dict = {'key': [], 'date': [], 'time': [], 'code': [], 'name': [], 'content': [], 'pn':[], 'ratio':[],
                          'close': [], 'diff':[], 'open': [], 'high': [], 'low': [], 'volume': [], 'gpt_pn': []}
 
@@ -83,10 +65,12 @@ class Main():
 
         self.total_article = []
 
+        ## USA 분석 Part ####################################################
         self.total_article_us = []
         self.get_article_usa()
         self.nlp_article_usa()
 
+        ## KOR 분석 Part ####################################################
         self.get_article()
         self.negative_word_df = None
         self.get_negative_word()
@@ -109,8 +93,13 @@ class Main():
 
         self.save_stock_data_to_mysql()
 
-    ##### KOR Article #####
     def get_data_http(self, page_no):
+        '''
+        (KOR)
+        네이버 뉴스 기사 가져오기
+        :param page_no:
+        :return:
+        '''
 
         page = page_no
         url = 'https://finance.naver.com/news/news_list.nhn?mode=LSS3D&section_id=101&section_id2=258&section_id3=402&date=' + self.date +'&page=' + page
@@ -124,6 +113,12 @@ class Main():
         return soup
 
     def get_article(self):
+        '''
+        (KOR)
+        네이버기사 html 파싱
+        :return:
+        '''
+
         articles = []
 
         for page_no in range(1, 10):
@@ -142,6 +137,13 @@ class Main():
                 self.total_article.append(article)
 
     def make_content_list(self, article_list):
+        '''
+        (KOR)
+        네이버기사 article에서 title 추출
+        :param article_list:
+        :return:
+        '''
+
         title_list = []
         for content in article_list:
             try:
@@ -152,11 +154,13 @@ class Main():
 
         return title_list
 
-    ##### USA Article #####
     def get_data_http_usa(self, page_no):
+        '''
+        USA 기사 가져오기
+        :param page_no:
+        :return:
+        '''
 
-        # https://towardsdatascience.com/sentiment-analysis-of-stocks-from-financial-news-using-python-82ebdcefb638
-        # https://blog.datahut.co/scraping-nasdaq-news-using-python/
         page = page_no
         url = 'https://www.nasdaq.com/news-and-insights/topic/markets/stocks/page/' + str(page)
 
@@ -169,13 +173,21 @@ class Main():
         return soup
 
     def get_article_usa(self):
+        '''
+        USA 기사 html 파싱
+        :return:
+        '''
+
         articles = []
         for page_no in range(1, 20):
-            soup = self.get_data_http_usa(page_no)
-            article_tag = soup.findAll('a', class_='content-feed__card-title-link')
+            try:
+                soup = self.get_data_http_usa(page_no)
+                article_tag = soup.findAll('a', class_='content-feed__card-title-link')
 
-            for article in article_tag:
-                articles.append(article.text)
+                for article in article_tag:
+                    articles.append(article.text)
+            except:
+                continue
 
         for article in articles:
             try:
@@ -189,8 +201,12 @@ class Main():
 
         # logger.info(self.total_article_us)
 
-    ##### USA NLP #####
     def nlp_article_usa(self):
+        '''
+        USA 기사 감성분석
+        :return:
+        '''
+
         # Instantiate the sentiment intensity analyzer
         vader = SentimentIntensityAnalyzer()
 
@@ -223,12 +239,23 @@ class Main():
         self.conn.commit()
 
 
-    ##### KOR NLP #####
     def get_negative_word(self):
+        '''
+        (KOR)
+        DB에 등록된 부정어 가져오기(현재 사용하지 않음)
+        :return:
+        '''
+
         sql = 'select nag_word, lang from nag_word'
         self.negative_word_df = pd.read_sql(sql, self.conn)
 
     def read_data(self, filename):
+        '''
+        (KOR)
+        영화리뷰 감성분석 모델 활용을 위한 전처리
+        :param filename:
+        :return:
+        '''
         with open(filename, 'r', encoding='utf-8') as f:
             data = [line.split('\t') for line in f.read().splitlines()]
             # txt 파일의 헤더(id document label)는 제외하기
@@ -236,10 +263,21 @@ class Main():
         return data
 
     def tokenize(self, doc):
+        '''
+        (KOR)
+        영화리뷰 감성분석 모델 활용을 위한 전처리
+        :param doc:
+        :return:
+        '''
         # norm은 정규화, stem은 근어로 표시하기를 나타냄
         return ['/'.join(t) for t in self.okt.pos(doc, norm=True, stem=True)]
 
     def make_docs_from_json(self):
+        '''
+        (KOR)
+        영화리뷰 감성분석 모델 활용을 위한 전처리
+        :return:
+        '''
         if os.path.isfile('./resource/train_docs.json'):
             with open('./resource/train_docs.json', encoding='utf-8') as f:
                 self.train_docs = json.load(f)
@@ -255,9 +293,21 @@ class Main():
                 json.dump(self.test_docs, make_file, ensure_ascii=False, indent="\t")
 
     def term_frequency(self, doc):
+        '''
+        (KOR)
+        영화리뷰 감성분석 모델 활용을 위한 전처리
+        :param doc:
+        :return:
+        '''
         return [doc.count(word) for word in self.selected_words]
 
     def predict_pos_neg(self, review):
+        '''
+        (KOR)
+        영화리뷰 감성분석 모델 활용 감성 분석 실행
+        :param review:
+        :return:
+        '''
         result_list = []
         token = self.tokenize(review)
         tf = self.term_frequency(token)
@@ -279,6 +329,13 @@ class Main():
         return result_list
 
     def apply_rule_keyword(self, currentPN, content):
+        '''
+        (KOR)
+        영화리뷰 감성분석 모델 결과로 정의된 부정어로 긍/부정 후처리(현재 사용하지 않음)
+        :param currentPN:
+        :param content:
+        :return:
+        '''
         str_result = ''
         if self.negative_word_df.size > 0:
             for i, row in self.negative_word_df.iterrows():
@@ -300,6 +357,12 @@ class Main():
         return str_result
 
     def get_stock_df(self):
+        '''
+        (KOR)
+        주식 종목 정보 가져오기
+        :return:
+        '''
+
         stock_df = pd.read_html('http://kind.krx.co.kr/corpgeneral/corpList.do?method=download&searchType=13', header=0)[0]
 
         # 종목코드가 6자리이기 때문에 6자리를 맞춰주기 위해 설정해줌
@@ -310,23 +373,41 @@ class Main():
         self.stock_df = stock_df.rename(columns={'회사명': 'name', '종목코드': 'code'})
 
     def cleanText(self, readData):
-        # 텍스트에 포함되어 있는 특수 문자 제거
-
+        '''
+        (KOR)
+        텍스트에 포함되어 있는 특수 문자 제거
+        :param readData:
+        :return:
+        '''
         text = re.sub('[-=+,#/\?:^$.@*\"※~&%ㆍ!』\\‘|\(\)\[\]\<\>`\'…》]', '', readData)
 
         return text
 
     def exec_predict_article(self):
+        '''
+        (KOR)
+        분석 메인 Function
+        '''
+
         pre_article = ''
         for articles in self.total_article:
             for article in articles:
                 selection_stock_df = self.stock_df[self.stock_df['name'].str.contains(self.cleanText(article.split(',')[0]))]
-                #logger.info(article.split(',')[0])
-                #logger.info(selection_stock_df)
 
                 if not selection_stock_df.empty:
+                    result_stock_df = selection_stock_df[selection_stock_df['name'] == self.cleanText(article.split(',')[0])]
+
+                    for i, row in result_stock_df.iterrows():
+                        stock_code = row['code']
+                        stock_name = row['name']
+
+                    # 해당코드가 이미 분석한 결과가 있는지 여부 체크
+                    if self.is_exists(stock_code):
+                        continue
+
                     article = article.replace('-', '')
 
+                    ## chatGPT 감성분석 part
                     chatresult = ''
 
                     if pre_article != article:
@@ -348,13 +429,10 @@ class Main():
 
                     logger.info(f'openai result : {chatresult}')
 
+                    ## 영화리뷰 모델 활용 감성분석 part
                     result_list = self.predict_pos_neg(article)
-                    result_stock_df = selection_stock_df.head(1)
 
-                    for i, row in result_stock_df.iterrows():
-                        stock_code = row['code']
-                        stock_name = row['name']
-
+                    ## 분석 결과 후처리
                     pn = result_list[0]
                     ratio = result_list[1]
 
@@ -390,6 +468,13 @@ class Main():
                     self.get_stock_info_detail_kor(stock_code)
 
     def chatGPT(self, prompt, API_KEY=YOUR_API_KEY):
+        '''
+        (KOR)
+        ChatGPT 감석분석 실행
+        :param prompt:
+        :param API_KEY:
+        :return:
+        '''
 
         str_decoded = cryptocode.decrypt(API_KEY, "openai")
         # set api key
@@ -412,6 +497,13 @@ class Main():
             return 'ChatGPT 에러가 발생 했습니다'
 
     def trans_papago(self, content):
+        '''
+        (KOR)
+        파파고 번역 실행
+        :param content:
+        :return: 파파고 일 번역 한도 초과시 content 처리 없이 그대로 return
+        '''
+
         # 파파고 API URL
         url = "https://openapi.naver.com/v1/papago/n2mt"
 
@@ -443,20 +535,53 @@ class Main():
             return content
 
     def is_korean(self, text):
+        '''
+        (KOR)
+        문장이 한글인지 여부 체크
+        :param text:
+        :return:
+        '''
         for char in text:
             if '가' <= char <= '힣':
                 return True
         return False
 
     def is_english(self, text):
+        '''
+        (KOR)
+        문장이 영문인지 여부 체크
+        :param text:
+        :return:
+        '''
         for char in text:
             if 'a' <= char.lower() <= 'z':
                 return True
         return False
 
+    def is_exists(self, code):
+        '''
+        (KOR)
+        해당코드가 이미 DB에 존재하고 있는지 여부 체크
+        :param code:
+        :return:
+        '''
+
+        sql = f"select count(*) as cnt from HDBOWN.prediction_pn where code_ = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYY-MM-DD')"
+        result_df = pd.read_sql(sql, self.conn)
+        if result_df.iloc[0, 0] >= 1:
+            logger.info(f'code that already exists : {code}')
+            return True
+        else:
+            logger.info(f'run analysis with new code : {code}')
+            return False
 
     def get_result_pn(self, sentence):
-
+        '''
+        (KOR)
+        감성 분석 결과에 대한 문장으로 긍/부정 판단
+        :param sentence:
+        :return:
+        '''
         # statement word
         s_word_list_kor_type1 = ['긍정', '부정']
         s_word_list_kor_type2 = ['사실', '진술']
@@ -509,8 +634,13 @@ class Main():
 
         return chatresult
 
-
     def get_stock_info_df(self, code):
+        '''
+        (KOR)
+        분석 결과 종목에 대한 현재 주가 정보 불러오기
+        :param code:
+        :return:
+        '''
         date = datetime.now().strftime('%Y.%m.%d')
         df = pd.DataFrame()
         headers = {
@@ -536,6 +666,12 @@ class Main():
         return df.head(1)
 
     def get_stock_info_detail_kor(self, code):
+        '''
+        (KOR)
+        분석 결과 종목에 대한 상세 정보 처리
+        :param code:
+        :return:
+        '''
         ticker_desc1 = '-'
         ticker_desc2 = '-'
         sise_52_price = '-'
@@ -587,7 +723,6 @@ class Main():
 
         except Exception as ex:
             logger.info('상세1 데이터 에러가 발생 했습니다')
-
 
         try:
 
@@ -777,6 +912,11 @@ class Main():
         self.stock_data_detail_dict['srim_20_price'].append(str(srim_20_price))
 
     def save_stock_data_to_mysql(self):
+        '''
+        (KOR)
+        분석결과 Oralce Cloud DB에 저장
+        :return:
+        '''
         df = pd.DataFrame(self.stock_data_dict, columns=['key', 'date', 'time', 'code', 'name', 'content', 'pn', 'ratio', 'close', 'diff', 'open', 'high', 'low', 'volume', 'gpt_pn'],
                           index=self.stock_data_dict['key'])
         # df.to_sql(name='prediction_pn', con=self.engine, if_exists='append', index=False)
