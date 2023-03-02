@@ -338,19 +338,9 @@ class Main():
                         prompt = self.trans_papago(prompt)
 
                         result_gpt_txt = self.chatGPT(prompt).strip()
-                        result_gpt = 0
-                        # 결과 값이 영문인지 한글인지 여부 체크
-                        if self.is_korean(result_gpt_txt):
-                            result_gpt = result_gpt_txt.find('부정')
-                        elif self.is_english(result_gpt_txt):
-                            result_gpt = result_gpt_txt.find('negative')
-                        else:
-                            result_gpt = -1
 
-                        if result_gpt == -1:
-                            chatresult = 'P'
-                        else:
-                            chatresult = 'N'
+                        # 긍/부정 결과 판단
+                        chatresult = self.get_result_pn(result_gpt_txt)
 
                     pre_article = article
 
@@ -463,6 +453,62 @@ class Main():
             if 'a' <= char.lower() <= 'z':
                 return True
         return False
+
+
+    def get_result_pn(self, sentence):
+
+        # statement word
+        s_word_list_kor_type1 = ['긍정', '부정']
+        s_word_list_kor_type2 = ['사실', '진술']
+        s_word_list_eng_type1 = ['positive', 'negative']
+        s_word_list_eng_type2 = ['statement', 'fact']
+
+        chk_statement = False
+
+        chatresult = None
+
+        result_gpt = 0
+
+        # 결과 값이 영문인지 한글인지 여부 체크
+        if self.is_korean(sentence):
+
+            if all(word in sentence for word in s_word_list_kor_type1):
+                chk_statement = True
+            else:
+                for word in s_word_list_kor_type2:
+                    if word in sentence:
+                        chk_statement = True
+
+            if chk_statement:
+                result_gpt = 0
+            else:
+                result_gpt = sentence.find('부정')
+
+        elif self.is_english(sentence):
+
+            if all(word in sentence for word in s_word_list_eng_type1):
+                chk_statement = True
+            else:
+                for word in s_word_list_eng_type2:
+                    if word in sentence:
+                        chk_statement = True
+
+            if chk_statement:
+                result_gpt = 0
+            else:
+                result_gpt = sentence.find('negative')
+        else:
+            result_gpt = 0
+
+        if result_gpt == -1:
+            chatresult = 'P'
+        elif result_gpt == 1:
+            chatresult = 'N'
+        else:
+            chatresult = 'C'
+
+        return chatresult
+
 
     def get_stock_info_df(self, code):
         date = datetime.now().strftime('%Y.%m.%d')
