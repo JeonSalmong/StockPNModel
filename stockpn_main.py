@@ -505,7 +505,7 @@ class Main():
         elif result_gpt == 1:
             chatresult = 'N'
         else:
-            chatresult = 'C'
+            chatresult = 'P'
 
         return chatresult
 

@@ -94,10 +94,12 @@ def main():
     # 지문 입력 란
     # prompt = input("Insert a prompt: ")
     # prompt = 'Hi-Mart, up to 50% discount on spring home appliances Is this a positive sentence? Is it a negative sentence?'
-    prompt = "Setopia, Last Year's Sales of KRW 116.5 Billion...51% from the previous year ↑ Is this a positive sentence? Is it a negative sentence?"
-    print(chatGPT(prompt).strip())
+    # prompt = "Setopia, Last Year's Sales of KRW 116.5 Billion...51% from the previous year ↑ Is this a positive sentence? Is it a negative sentence?"
+    prompt = 'Dentium, "External growth is now in the beginning stage," but the stock price is strong. Is this a positive sentence? Is it a negative sentence?'
+    result = chatGPT(prompt).strip()
+    print(result)
 
-    print(get_result_pn(chatGPT(prompt).strip()))
+    print(get_result_pn(result))
 
     # str_encoded = cryptocode.encrypt("api_key", "openai")
     # print(str_encoded)
