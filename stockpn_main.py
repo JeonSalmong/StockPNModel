@@ -21,6 +21,10 @@ import openai
 
 import cryptocode
 
+import platform
+
+import math
+
 # 로그 생성
 logger = logging.getLogger()
 
@@ -37,6 +41,8 @@ logger.addHandler(stream_handler)
 
 YOUR_API_KEY = '85Qs4r6Sa+pJp5zE/t7g7cOOg84nQ9jSw4I9ncRF4EWdt2o8p+wRv4KIx02uUR053gN4*WNddlDiZ242Rf30v/pT3Ag==*eUD3YPnrpi8gCR0in+RUDg==*+TwdK7nlgA8kOnpP9kZ8Jg=='
 
+os_type = platform.system()
+
 class Main():
 
     def __init__(self):
@@ -48,9 +54,19 @@ class Main():
         self.date = datetime.now().strftime('%Y%m%d')
         self.time = datetime.now().strftime('%H%M')
 
+        logger.info("OS Type : " + os_type)
+
         ###################### Oracle cloud DB #############################################################################
-        # cx_Oracle.init_oracle_client(lib_dir=r".\resource\instantclient_19_17")
-        cx_Oracle.init_oracle_client(lib_dir="/usr/lib/oracle/21/client64/lib")
+        if os_type == 'Windows':
+            cx_Oracle.init_oracle_client(lib_dir=r".\resource\instantclient_19_17")
+        else:
+            cx_Oracle.init_oracle_client(lib_dir="/usr/lib/oracle/21/client64/lib")
+
+        # openai call sleep time 설정
+        if os_type == 'Windows':
+            self.sleep_time = 0
+        else:
+            self.sleep_time = 65
 
         self.conn = cx_Oracle.connect(user='HDBOWN', password='Qwer1234!@#$', dsn='ppanggoodoracledb_high')
         self.cursor = self.conn.cursor()
@@ -411,7 +427,7 @@ class Main():
                     chatresult = ''
 
                     if pre_article != article:
-                        time.sleep(65.0)  # ChatGPT API 호출 타임
+                        time.sleep(self.sleep_time)  # ChatGPT API 호출 타임
                         # ChatGPT result
                         prompt = article + ' 이 문장이 긍정문이야? 부정문이야?'
 
@@ -696,8 +712,9 @@ class Main():
 
         C1, C2, C3, C4, C5 = 1, 1, 1, 1, 1
 
+        # 요구수익율 구하기 : BBB-등급 5년 채권 수익율 보다는 높은 수익율 기대치 반영
         try:
-            url_rating = 'http://www.rating.co.kr/disclosure/QDisclosure029.do'
+            url_rating = 'https://www.kisrating.co.kr/ratingsStatistics/statics_spread.do'
             headers = {
                 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                               'Chrome/84.0.4147.135 Safari/537.36'
@@ -719,13 +736,13 @@ class Main():
             list_to_np = np_arr[0].tolist()
             C3 = float(list_to_np[0])
             srim_revenue_rate = C3
-            logger.info(srim_revenue_rate)
+            logger.info('BBB-등급 5년 채권 수익율 : ' + srim_revenue_rate)
 
         except Exception as ex:
-            logger.info('상세1 데이터 에러가 발생 했습니다')
+            logger.info('BBB-등급 5년 채권 수익율 가져오기 실패!!')
 
+        # 기업 상세 정보
         try:
-
             url_ticker = 'http://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?pGB=1&gicode=A'+code+'&cID=&MenuYn=Y&ReportGB=&NewMenuID=101&stkGb=701'
             headers = {
                 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -809,14 +826,14 @@ class Main():
             # 지배주주 지분(C4) : Annuel 기준 전년도 말 값 (리스트 값 중 3번째 값)
             np_arr = df.loc[[9], :].values
             list_to_np = np_arr[0].tolist()
-            C4 = float(list_to_np[4])
-            srim_jibea = str(format(float(list_to_np[4]), ','))
+            C4 = float(self.util_get_array(list_to_np))
+            srim_jibea = str(format(C4, ','))
             logger.info(srim_jibea)
 
             # ROA(C5) : Annuel 기준 가장 마지막 값으로 함
             np_arr = df.iloc[[16], 1:5].values
             list_to_np = np_arr[0].tolist()
-            ROA = float(list_to_np[-1])
+            ROA = float(self.util_get_array(list_to_np))
             srim_roa = ROA
             logger.info(srim_roa)
 
@@ -824,8 +841,8 @@ class Main():
             np_arr = df.iloc[[17], 1:5].values
             list_to_np = np_arr[0].tolist()
             # logger.info(list_to_np)
-            ROE = float(list_to_np[-1])
-            C5 = float(list_to_np[-1])
+            ROE = float(self.util_get_array(list_to_np))
+            C5 = ROE
             srim_roe = ROE
             logger.info(srim_roe)
 
@@ -837,7 +854,7 @@ class Main():
                 C5 = ROE
 
             # 기업가치 : (C4+(C4*(C5-C3)/C3))*100000000
-            company_value = (C4 + (C4 * (C5 - C3) / C3)) * 100000000
+            company_value = (C4 + (C4 * (ROE - C3) / C3)) * 100000000
             srim_value = str(format(float(company_value), ','))
             logger.info(srim_value)
 
@@ -884,7 +901,7 @@ class Main():
             logger.info(srim_10_price)
             logger.info(srim_20_price)
         except Exception as ex:
-            logger.info('상세2 데이터 에러가 발생 했습니다')
+            logger.info('기업 상세 자료 가져오기 실패!!')
 
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
@@ -936,9 +953,22 @@ class Main():
         self.conn.commit()
         logger.info('DB저장 완료')
 
+    def util_get_array(self, array):
+        '''
+        파이썬 역순으로 순회하여 Nan이 아닌 값 찾기
+        :param array:
+        :return:
+        '''
+        return_value = 0
+        for value in reversed(array):
+            if value is not None and not math.isnan(value):
+                return_value = value
+                break
+        return return_value
 
+
+## Main #########################################################################################
 import time, traceback
-
 
 def every(delay, task):
   next_time = time.time() + delay
