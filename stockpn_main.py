@@ -748,7 +748,8 @@ class Main():
             logger.info('BBB-등급 5년 채권 수익율 : ' + srim_revenue_rate)
 
         except Exception as ex:
-            logger.info('BBB-등급 5년 채권 수익율 가져오기 실패!!')
+            logger.info('BBB-등급 5년 채권 수익율 가져오기 실패!! : ', ex)
+            C3 = 20.0
 
         # 기업 상세 정보
         try:
@@ -910,7 +911,7 @@ class Main():
             logger.info(srim_10_price)
             logger.info(srim_20_price)
         except Exception as ex:
-            logger.info('기업 상세 자료 가져오기 실패!!')
+            logger.info('기업 상세 자료 가져오기 실패!! : ' + ex)
 
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
