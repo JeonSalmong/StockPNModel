@@ -772,7 +772,10 @@ class Main():
             stxt2_tag = soup.find("span", attrs={"class": "stxt stxt2"})
             ticker_desc2 = stxt2_tag.text
             logger.info(ticker_desc2)
+        except Exception as ex:
+            logger.info(f'기업 상세 자료 가져오기 실패!! : {ex}')
 
+        try:
             # 시세현황
             table = soup.findAll('table')
             read_html = str(table[0])
@@ -782,28 +785,27 @@ class Main():
             np_arr = df.loc[[1], :].values
             list_to_np = np_arr[0].tolist()
             sise_52_price = str(list_to_np[1])
-            logger.info(sise_52_price)
 
             np_arr = df.loc[[2], :].values
             list_to_np = np_arr[0].tolist()
             sise_revenue_rate = str(list_to_np[1])
-            logger.info(sise_revenue_rate)
 
             np_arr = df.loc[[3], :].values
             list_to_np = np_arr[0].tolist()
             sise_siga_tot = str(format(int(list_to_np[1]), ','))
-            logger.info(sise_siga_tot)
 
             np_arr = df.loc[[4], :].values
             list_to_np = np_arr[0].tolist()
             sise_siga_tot2 = str(format(int(list_to_np[1]), ','))
-            logger.info(sise_siga_tot2)
 
             np_arr = df.loc[[6], :].values
             list_to_np = np_arr[0].tolist()
             sise_issue_stock_normal = str(list_to_np[1])
-            logger.info(sise_issue_stock_normal)
+            logger.info(f'시세현황 : {sise_issue_stock_normal}')
+        except Exception as ex:
+            logger.info(f'시세현황 에러!! : {ex}')
 
+        try:
             # 투자의견컨센서스
             table = soup.findAll('table')
             read_html = str(table[7])
@@ -813,20 +815,15 @@ class Main():
             np_arr = df.loc[[0], :].values
             list_to_np = np_arr[0].tolist()
             toja_discision = str(list_to_np[0])
-            logger.info(toja_discision)
-
             toja_prop_price = str(format(int(list_to_np[1]), ','))
-            logger.info(toja_prop_price)
-
             toja_eps = str(format(int(list_to_np[2]), ','))
-            logger.info(toja_eps)
-
             toja_per = str(list_to_np[3])
-            logger.info(toja_per)
-
             toja_comp = str(int(list_to_np[4]))
-            logger.info(toja_comp)
+            logger.info(f'투자의견컨센서스 : {toja_discision}')
+        except Exception as ex:
+            logger.info(f'투자의견컨센서스 에러!! : {ex}')
 
+        try:
             # SRIM
             table = soup.findAll('table')
             read_html = str(table[10])
@@ -838,14 +835,12 @@ class Main():
             list_to_np = np_arr[0].tolist()
             C4 = float(self.util_get_array(list_to_np))
             srim_jibea = str(format(C4, ','))
-            logger.info(srim_jibea)
 
             # ROA(C5) : Annuel 기준 가장 마지막 값으로 함
             np_arr = df.iloc[[16], 1:5].values
             list_to_np = np_arr[0].tolist()
             ROA = float(self.util_get_array(list_to_np))
             srim_roa = ROA
-            logger.info(srim_roa)
 
             # ROE(C5) : Annuel 기준 가장 마지막 값으로 함
             np_arr = df.iloc[[17], 1:5].values
@@ -854,7 +849,6 @@ class Main():
             ROE = float(self.util_get_array(list_to_np))
             C5 = ROE
             srim_roe = ROE
-            logger.info(srim_roe)
 
             # ROA와 ROE차가 5%이상이면 ROA로 계산함
             RO_Compare = ROE - ROA
@@ -866,7 +860,6 @@ class Main():
             # 기업가치 : (C4+(C4*(C5-C3)/C3))*100000000
             company_value = (C4 + (C4 * (ROE - C3) / C3)) * 100000000
             srim_value = str(format(float(company_value), ','))
-            logger.info(srim_value)
 
             # 발행주식수
             issue_stock_val = sise_issue_stock_normal.split("/")[0]
@@ -886,13 +879,10 @@ class Main():
             # 발행주식수(보통주) - 자기주식(보통주)수
             ticker_issue_stock_cnt = issue_stock_cnt - self_stock_cnt
             srim_issue_stock = str(format(int(ticker_issue_stock_cnt), ','))
-            logger.info(srim_issue_stock)
 
             # 적정가격
             price_hope = company_value / ticker_issue_stock_cnt
             srim_prop_price = str(format(int(price_hope), ','))
-            logger.info(srim_prop_price)
-
             price_over = C4 * (C5 - C3) / 100
 
             down_rate_9 = (C4 + price_over * (0.9 / (1 + (C3 / 100) - 0.9))) * 100000000
@@ -908,10 +898,9 @@ class Main():
             srim_10_price = str(format(int(srim_10_price), ','))
             srim_20_price = str(format(int(srim_20_price), ','))
 
-            logger.info(srim_10_price)
-            logger.info(srim_20_price)
+            logger.info(f'SRIM 계산 : {srim_prop_price}')
         except Exception as ex:
-            logger.info(f'기업 상세 자료 가져오기 실패!! : {ex}')
+            logger.info(f'SRIM 계산 에러!! : {ex}')
 
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
@@ -944,24 +933,27 @@ class Main():
         분석결과 Oralce Cloud DB에 저장
         :return:
         '''
-        df = pd.DataFrame(self.stock_data_dict, columns=['key', 'date', 'time', 'code', 'name', 'content', 'pn', 'ratio', 'close', 'diff', 'open', 'high', 'low', 'volume', 'gpt_pn'],
-                          index=self.stock_data_dict['key'])
-        # df.to_sql(name='prediction_pn', con=self.engine, if_exists='append', index=False)
+        try:
+            df = pd.DataFrame(self.stock_data_dict, columns=['key', 'date', 'time', 'code', 'name', 'content', 'pn', 'ratio', 'close', 'diff', 'open', 'high', 'low', 'volume', 'gpt_pn'],
+                              index=self.stock_data_dict['key'])
+            # df.to_sql(name='prediction_pn', con=self.engine, if_exists='append', index=False)
 
-        self.cursor.executemany(
-            "insert into HDBOWN.prediction_pn (key_, date_, time_, code_, name_, content_, pn_, ratio_, close_, diff_, open_, high_, low_, volume_, gpt_pn_) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15)", df.values.tolist())
-        self.conn.commit()
+            self.cursor.executemany(
+                "insert into HDBOWN.prediction_pn (key_, date_, time_, code_, name_, content_, pn_, ratio_, close_, diff_, open_, high_, low_, volume_, gpt_pn_) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15)", df.values.tolist())
+            self.conn.commit()
 
-        df2 = pd.DataFrame(self.stock_data_detail_dict,
-                          columns=['key', 'date', 'code', 'ticker_desc1', 'ticker_desc2', 'sise_52_price', 'sise_revenue_rate', 'sise_siga_tot', 'sise_siga_tot2', 'sise_issue_stock_normal', 'toja_discision',
-                                   'toja_prop_price', 'toja_eps', 'toja_per', 'toja_comp', 'srim_revenue_rate', 'srim_jibea', 'srim_roa', 'srim_roe', 'srim_value', 'srim_issue_stock', 'srim_prop_price', 'srim_10_price', 'srim_20_price'],
-                          index=self.stock_data_detail_dict['key'])
-        # df2.to_sql(name='prediction_detail_ko', con=self.engine, if_exists='append', index=False)
-        df2 = df2.fillna('')
-        self.cursor.executemany(
-            "insert into HDBOWN.prediction_detail_ko (key_, date_, code_, ticker_desc1, ticker_desc2, sise_52_price, sise_revenue_rate, sise_siga_tot, sise_siga_tot2, sise_issue_stock_normal, toja_discision, toja_prop_price, toja_eps, toja_per, toja_comp, srim_revenue_rate, srim_jibea, srim_roa, srim_roe, srim_value, srim_issue_stock, srim_prop_price, srim_10_price, srim_20_price) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15, :16, :17, :18, :19, :20, :21, :22, :23, :24)", df2.values.tolist())
-        self.conn.commit()
-        logger.info('DB저장 완료')
+            df2 = pd.DataFrame(self.stock_data_detail_dict,
+                              columns=['key', 'date', 'code', 'ticker_desc1', 'ticker_desc2', 'sise_52_price', 'sise_revenue_rate', 'sise_siga_tot', 'sise_siga_tot2', 'sise_issue_stock_normal', 'toja_discision',
+                                       'toja_prop_price', 'toja_eps', 'toja_per', 'toja_comp', 'srim_revenue_rate', 'srim_jibea', 'srim_roa', 'srim_roe', 'srim_value', 'srim_issue_stock', 'srim_prop_price', 'srim_10_price', 'srim_20_price'],
+                              index=self.stock_data_detail_dict['key'])
+            # df2.to_sql(name='prediction_detail_ko', con=self.engine, if_exists='append', index=False)
+            df2 = df2.fillna('')
+            self.cursor.executemany(
+                "insert into HDBOWN.prediction_detail_ko (key_, date_, code_, ticker_desc1, ticker_desc2, sise_52_price, sise_revenue_rate, sise_siga_tot, sise_siga_tot2, sise_issue_stock_normal, toja_discision, toja_prop_price, toja_eps, toja_per, toja_comp, srim_revenue_rate, srim_jibea, srim_roa, srim_roe, srim_value, srim_issue_stock, srim_prop_price, srim_10_price, srim_20_price) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15, :16, :17, :18, :19, :20, :21, :22, :23, :24)", df2.values.tolist())
+            self.conn.commit()
+            logger.info('DB저장 완료')
+        except Exception as ex:
+            logger.info(f'DB저장 에러!! : {ex}')
 
     def util_get_array(self, array):
         '''
