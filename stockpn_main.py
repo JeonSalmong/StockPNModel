@@ -408,6 +408,13 @@ class Main():
         pre_article = ''
         stock_code = ''
         stock_name = ''
+        close = ''
+        diff = ''
+        open = ''
+        high = ''
+        low = ''
+        volume = ''
+
         for articles in self.total_article:
             for article in articles:
                 selection_stock_df = self.stock_df[self.stock_df['name'].str.contains(self.cleanText(article.split(',')[0]))]
