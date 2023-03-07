@@ -72,7 +72,7 @@ class Main():
         self.cursor = self.conn.cursor()
 
         self.stock_data_dict = {'key': [], 'date': [], 'time': [], 'code': [], 'name': [], 'content': [], 'pn':[], 'ratio':[],
-                         'close': [], 'diff':[], 'open': [], 'high': [], 'low': [], 'volume': [], 'gpt_pn': []}
+                         'close': [], 'diff':[], 'open': [], 'high': [], 'low': [], 'volume': [], 'gpt_pn': [], 'report': []}
 
         self.stock_data_detail_dict = {'key': [], 'date': [], 'code': [], 'ticker_desc1': [], 'ticker_desc2':[], 'sise_52_price':[],
                          'sise_revenue_rate': [], 'sise_siga_tot':[], 'sise_siga_tot2': [], 'sise_issue_stock_normal': [], 'toja_discision': [], 'toja_prop_price': [],
@@ -490,7 +490,7 @@ class Main():
 
                     #logger.info(self.stock_data_dict)
 
-                    self.get_stock_info_detail_kor(stock_code)
+                    self.get_stock_info_detail_kor(stock_code, stock_name)
 
     def chatGPT(self, prompt, API_KEY=YOUR_API_KEY):
         '''
@@ -690,7 +690,7 @@ class Main():
 
         return df.head(1)
 
-    def get_stock_info_detail_kor(self, code):
+    def get_stock_info_detail_kor(self, code, name):
         '''
         (KOR)
         분석 결과 종목에 대한 상세 정보 처리
@@ -718,6 +718,7 @@ class Main():
         srim_prop_price = '-'
         srim_10_price = '-'
         srim_20_price = '-'
+        result_gpt_txt = ''
 
         C1, C2, C3, C4, C5 = 1, 1, 1, 1, 1
 
@@ -902,6 +903,29 @@ class Main():
         except Exception as ex:
             logger.info(f'SRIM 계산 에러!! : {ex}')
 
+        try:
+            # 기업정보Report
+            object1 = soup.find("div", attrs={"class": "um_bssummary"})
+            value1 = object1.find('h3')
+            value2 = object1.find('li')
+
+            time.sleep(self.sleep_time)  # ChatGPT API 호출 타임
+            # ChatGPT result
+            prompt = f"Please summarize the following text:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
+            logger.info(f'기업정보Report Original: {prompt}')
+            result_gpt_txt = self.chatGPT(prompt).strip()
+
+            # 문장 구분을 위한 패턴
+            sentence_pattern = re.compile(r'.+?[.?!]')
+
+            # 문단을 문장으로 분리
+            sentences = sentence_pattern.findall(result_gpt_txt)
+            result_gpt_txt = sentences[0].strip()
+
+            logger.info(f'기업정보Report GPT: {result_gpt_txt}')
+        except Exception as ex:
+            logger.info(f'기업정보Report 에러!! : {ex}')
+
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
         self.stock_data_detail_dict['code'].append(code)
@@ -926,6 +950,7 @@ class Main():
         self.stock_data_detail_dict['srim_prop_price'].append(str(srim_prop_price))
         self.stock_data_detail_dict['srim_10_price'].append(str(srim_10_price))
         self.stock_data_detail_dict['srim_20_price'].append(str(srim_20_price))
+        self.stock_data_dict['report'].append(str(result_gpt_txt))
 
     def save_stock_data_to_mysql(self):
         '''
@@ -934,12 +959,12 @@ class Main():
         :return:
         '''
         try:
-            df = pd.DataFrame(self.stock_data_dict, columns=['key', 'date', 'time', 'code', 'name', 'content', 'pn', 'ratio', 'close', 'diff', 'open', 'high', 'low', 'volume', 'gpt_pn'],
+            df = pd.DataFrame(self.stock_data_dict, columns=['key', 'date', 'time', 'code', 'name', 'content', 'pn', 'ratio', 'close', 'diff', 'open', 'high', 'low', 'volume', 'gpt_pn', 'report'],
                               index=self.stock_data_dict['key'])
             # df.to_sql(name='prediction_pn', con=self.engine, if_exists='append', index=False)
 
             self.cursor.executemany(
-                "insert into HDBOWN.prediction_pn (key_, date_, time_, code_, name_, content_, pn_, ratio_, close_, diff_, open_, high_, low_, volume_, gpt_pn_) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15)", df.values.tolist())
+                "insert into HDBOWN.prediction_pn (key_, date_, time_, code_, name_, content_, pn_, ratio_, close_, diff_, open_, high_, low_, volume_, gpt_pn_, report_) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15, :16)", df.values.tolist())
             self.conn.commit()
 
             df2 = pd.DataFrame(self.stock_data_detail_dict,
