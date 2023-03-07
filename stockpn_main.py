@@ -913,6 +913,9 @@ class Main():
             # ChatGPT result
             prompt = f"Please summarize the following text:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
             logger.info(f'기업정보Report Original: {prompt}')
+            word_to_check = '동사는'
+            if word_to_check in prompt:
+                prompt = prompt.replace(word_to_check, '')
             result_gpt_txt = self.chatGPT(prompt).strip()
 
             # 문장 구분을 위한 패턴
