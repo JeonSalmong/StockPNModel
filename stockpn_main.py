@@ -209,13 +209,44 @@ class Main():
             try:
                 company_name = article.split('(', 1)[0]
                 ticker = article.split('(', 1)[1].split(')')[0]
-                if len(ticker) > 10:
+                if len(ticker) > 4:
                     continue
-                self.total_article_us.append([ticker, self.date, self.time, article, company_name])
+
+                self.get_company_info_usa(ticker, article)
+
             except:
                 continue
 
-        # logger.info(self.total_article_us)
+    def get_company_info_usa(self, ticker, article):
+        '''
+        USA ticker에 해당하는 기업 정보 가져오기
+        :param ticker:
+        :return:
+        '''
+        url = "https://www.nasdaq.com/market-activity/stocks/{}".format(ticker.lower())
+        headers = {
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/84.0.4147.135 Safari/537.36'
+        }
+        res = requests.get(url, headers=headers)
+        content_type = res.headers['content-type']
+        if not 'charset' in content_type:
+            res.encoding = res.apparent_encoding
+
+        soup = BeautifulSoup(res.text, 'lxml')
+
+        company_name = soup.find("span", attrs={"class": "symbol-page-header__name"}).text.strip()
+
+        # price = soup.find('div', {'class': 'symbol-page-header__pricing-price'}).text.strip()
+        # company_info = soup.find('div', {'class': 'symbol-page-header__description'}).text.strip()
+
+        logger.info("Company: {}".format(company_name))
+        # print("Company: {}".format(company_name))
+        # print("Price: {}".format(price))
+        # print("Company Info: {}".format(company_info))
+
+        self.total_article_us.append([ticker, self.date, self.time, article, company_name])
+
 
     def nlp_article_usa(self):
         '''
