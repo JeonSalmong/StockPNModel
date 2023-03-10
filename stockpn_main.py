@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from tensorflow import keras
 import numpy as np
@@ -87,7 +87,17 @@ class Main():
         self.nlp_article_usa()
 
         ## KOR 분석 Part ####################################################
-        self.get_article()
+        articleCnt = 1
+        self.get_article(self.date)
+        while True:
+            if len(self.total_article) < 20:
+                now = datetime.now()
+                one_day_ago = now - timedelta(days=articleCnt)
+                self.get_article(one_day_ago.strftime('%Y%m%d'))
+                articleCnt += 1
+            else:
+                break
+
         self.negative_word_df = None
         self.get_negative_word()
 
@@ -109,7 +119,7 @@ class Main():
 
         self.save_stock_data_to_mysql()
 
-    def get_data_http(self, page_no):
+    def get_data_http(self, date, page_no):
         '''
         (KOR)
         네이버 뉴스 기사 가져오기
@@ -118,7 +128,7 @@ class Main():
         '''
 
         page = page_no
-        url = 'https://finance.naver.com/news/news_list.nhn?mode=LSS3D&section_id=101&section_id2=258&section_id3=402&date=' + self.date +'&page=' + page
+        url = 'https://finance.naver.com/news/news_list.nhn?mode=LSS3D&section_id=101&section_id2=258&section_id3=402&date=' + date +'&page=' + page
 
         headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -128,7 +138,7 @@ class Main():
         soup = BeautifulSoup(res.text, 'html.parser')
         return soup
 
-    def get_article(self):
+    def get_article(self, date):
         '''
         (KOR)
         네이버기사 html 파싱
@@ -138,7 +148,8 @@ class Main():
         articles = []
 
         for page_no in range(1, 10):
-            soup = self.get_data_http(str(page_no))
+
+            soup = self.get_data_http(date, str(page_no))
             article_tag = soup.select_one('#contentarea_left')
             article_list_dd = article_tag.select('li > dl > dd')
             title_list_dd = self.make_content_list(article_list_dd)
