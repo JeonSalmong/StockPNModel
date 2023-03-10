@@ -25,6 +25,8 @@ import platform
 
 import math
 
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
 # 로그 생성
 logger = logging.getLogger()
 
@@ -241,11 +243,89 @@ class Main():
         # company_info = soup.find('div', {'class': 'symbol-page-header__description'}).text.strip()
 
         logger.info("Company: {}".format(company_name))
-        # print("Company: {}".format(company_name))
-        # print("Price: {}".format(price))
-        # print("Company Info: {}".format(company_info))
+        report = self.get_company_report_usa(ticker, company_name)
+        logger.info("Summary: {}".format(report))
+        self.total_article_us.append([ticker, self.date, self.time, article, company_name, report])
 
-        self.total_article_us.append([ticker, self.date, self.time, article, company_name])
+    def get_company_report_usa(self, ticker, company_name):
+        '''
+        USA 기업 리포트 요약
+        :param ticker:
+        :return:
+        '''
+        try:
+            # 보고서 종류와 url을 지정합니다.
+            report_type = "10-K"
+            url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type={report_type}&dateb=&owner=exclude&count=40"
+            headers = {
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                              'Chrome/84.0.4147.135 Safari/537.36'
+            }
+            # url에서 보고서 링크를 가져옵니다.
+            response = requests.get(url, headers=headers)
+            soup = BeautifulSoup(response.content, "html.parser")
+            table = soup.find("table", {"class": "tableFile2"})
+            rows = table.findAll("tr")
+            document_link = ""
+            for row in rows:
+                cells = row.findAll("td")
+                if len(cells) > 3 and report_type in cells[0].text:
+                    document_link = "https://www.sec.gov" + cells[1].a["href"]
+                    break
+
+            # 보고서 링크에서 텍스트 데이터를 가져옵니다.
+            response = requests.get(document_link, headers=headers)
+            soup = BeautifulSoup(response.content, "html.parser")
+            table = soup.find("table", {"class": "tableFile"})
+            rows = table.findAll("tr")
+            document_link = ""
+            for row in rows:
+                cells = row.findAll("td")
+                find_word = 'ix?doc=/'
+                if len(cells) > 1 and report_type in cells[1].text:
+                    document_link = "https://www.sec.gov" + cells[2].a["href"]
+                    document_link = document_link.replace(find_word, '')
+                    break
+
+            response = requests.get(document_link, headers=headers)
+            soup = BeautifulSoup(response.content, "html.parser")
+            document = soup.find("body").get_text()
+
+            # 텍스트 전처리를 수행합니다.
+            document = re.sub(r"\n", " ", document)  # 개행문자 제거
+            document = re.sub(r"\s+", " ", document)  # 여러 개의 공백을 하나의 공백으로 변경
+
+            delimiter = 'FORM 10-K'
+            document_parts = document.split(delimiter)
+            document = document_parts[1]
+            # 가져온 텍스트 데이터를 출력합니다.
+            # print(text_data)
+
+            document = re.sub('[^A-Za-z0-9가-힣ㄱ-ㅎㅏ-ㅣ\\s]+', '', document)
+
+            # Load GPT model and tokenizer
+            model_name = "gpt2"
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModelForCausalLM.from_pretrained(model_name)
+
+            # Set the maximum sequence length
+            max_length = 1024
+
+            # Tokenize the text
+            input_ids = tokenizer.encode(document, max_length=max_length, truncation=True)
+
+            # Decode the tokenized input
+            modified_text = tokenizer.decode(input_ids)
+            prompt = f"The following text is part of the {company_name} report. Please summarize the main business aspects of this company using bullet points in 5 to 7 sentences or less:\n\n" + modified_text
+            result = self.chatGPT(prompt, YOUR_API_KEY)
+            result_list = result.split('\n\n')
+            if len(result_list) > 0:
+                return result_list[-1].strip()
+            else:
+                return result
+        except Exception as ex:
+            logger.info(f'unable to summarize the company report. : {ex}')
+            return 'unable to summarize the company report.'
 
 
     def nlp_article_usa(self):
@@ -258,7 +338,7 @@ class Main():
         vader = SentimentIntensityAnalyzer()
 
         # Set column names
-        columns = ['ticker', 'date_', 'time_', 'headline', 'company_name']
+        columns = ['ticker', 'date_', 'time_', 'headline', 'company_name', 'report_']
 
         # Convert the parsed_news list into a DataFrame called 'parsed_and_scored_news'
         parsed_and_scored_news = pd.DataFrame(self.total_article_us, columns=columns)
@@ -282,7 +362,7 @@ class Main():
         # logger.info(parsed_and_scored_news.values.tolist())
 
         # parsed_and_scored_news.to_sql('prediction_pn_us', schema="HDBOWN", con=self.conn, if_exists='append', index=False)
-        self.cursor.executemany("insert into HDBOWN.prediction_pn_us (ticker, date_, time_, headline, company_name, neg, neu, pos, compound) values (:1, :2, :3, :4, :5, :6, :7, :8, :9)", parsed_and_scored_news.values.tolist())
+        self.cursor.executemany("insert into HDBOWN.prediction_pn_us (ticker, date_, time_, headline, company_name, neg, neu, pos, compound, report_) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10)", parsed_and_scored_news.values.tolist())
         self.conn.commit()
 
 
@@ -467,7 +547,6 @@ class Main():
                     chatresult = ''
 
                     if pre_article != article:
-                        time.sleep(self.sleep_time)  # ChatGPT API 호출 타임
                         # ChatGPT result
                         prompt = article + ' 이 문장이 긍정문이야? 부정문이야?'
 
@@ -531,7 +610,7 @@ class Main():
         :param API_KEY:
         :return:
         '''
-
+        time.sleep(self.sleep_time)  # ChatGPT API 호출 타임
         str_decoded = cryptocode.decrypt(API_KEY, "openai")
         # set api key
         openai.api_key = str_decoded
@@ -542,8 +621,8 @@ class Main():
                 engine='text-davinci-003'  # 'text-curie-001'  # 'text-babbage-001' #'text-ada-001'
                 , prompt=prompt
                 , temperature=0.5
-                , max_tokens=1024
-                , top_p=1
+                , max_tokens=2096
+                , top_p=0.5
                 , frequency_penalty=0
                 , presence_penalty=0)
 
@@ -940,9 +1019,8 @@ class Main():
             value1 = object1.find('h3')
             value2 = object1.find('li')
 
-            time.sleep(self.sleep_time)  # ChatGPT API 호출 타임
             # ChatGPT result
-            prompt = f"Please summarize the following text:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
+            prompt = f"Please summarize the following text using bullet points:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
             logger.info(f'기업정보Report Original: {prompt}')
             word_to_check = '동사는'
             if word_to_check in prompt:
