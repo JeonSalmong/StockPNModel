@@ -47,7 +47,7 @@ def summarize_text(text, API_KEY=YOUR_API_KEY):
         engine="text-davinci-003",
         prompt=("The following text is part of a corporate report. Please summarize the main aspects of this company in 5 sentences or less. using bullet pointsThe following text is part of a corporate report. Please summarize the main aspects of this company using bullet points in 5 to 7 sentences or less:\n\n" + text),
         temperature=0.3,
-        max_tokens=4097,
+        max_tokens=2096,
         top_p=0.5,
         frequency_penalty=0,
         presence_penalty=0
@@ -59,7 +59,7 @@ def summarize_text(text, API_KEY=YOUR_API_KEY):
 
 
 # NASDAQ ticker를 입력합니다.
-ticker = "LDI"
+ticker = "BIGC"
 
 # 보고서 종류와 url을 지정합니다.
 report_type = "10-K"
@@ -108,7 +108,7 @@ document = document_parts[1]
 # 가져온 텍스트 데이터를 출력합니다.
 # print(text_data)
 
-modified_text = truncate_sentence(document, 2096)
+modified_text = truncate_sentence(document, 1024)
 
 # # Load GPT model and tokenizer
 # model_name = "gpt2"

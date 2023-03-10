@@ -195,7 +195,7 @@ class Main():
         '''
 
         articles = []
-        for page_no in range(1, 20):
+        for page_no in range(1, 5):
             try:
                 soup = self.get_data_http_usa(page_no)
                 article_tag = soup.findAll('a', class_='content-feed__card-title-link')
@@ -207,12 +207,13 @@ class Main():
 
         for article in articles:
             try:
-                company_name = article.split('(', 1)[0]
                 ticker = article.split('(', 1)[1].split(')')[0]
                 if len(ticker) > 4:
                     continue
 
                 self.get_company_info_usa(ticker, article)
+                if os_type == 'Windows':
+                    break
 
             except:
                 continue
@@ -378,8 +379,9 @@ class Main():
         # logger.info(parsed_and_scored_news.values.tolist())
 
         # parsed_and_scored_news.to_sql('prediction_pn_us', schema="HDBOWN", con=self.conn, if_exists='append', index=False)
-        self.cursor.executemany("insert into HDBOWN.prediction_pn_us (ticker, date_, time_, headline, company_name, neg, neu, pos, compound, report_) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10)", parsed_and_scored_news.values.tolist())
+        self.cursor.executemany("insert into HDBOWN.prediction_pn_us (ticker, date_, time_, headline, company_name, report_, neg, neu, pos, compound) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10)", parsed_and_scored_news.values.tolist())
         self.conn.commit()
+        logger.info(f'USA DB SAVE : {len(parsed_and_scored_news)}')
 
 
     def get_negative_word(self):
