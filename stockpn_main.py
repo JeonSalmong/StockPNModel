@@ -25,8 +25,6 @@ import platform
 
 import math
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
-
 # 로그 생성
 logger = logging.getLogger()
 
@@ -247,6 +245,32 @@ class Main():
         logger.info("Summary: {}".format(report))
         self.total_article_us.append([ticker, self.date, self.time, article, company_name, report])
 
+    def truncate_sentence(self, sentence: str, num_tokens: int) -> str:
+        '''
+        주어진 토큰 수로 자르기
+        :param sentence:
+        :param num_tokens:
+        :return:
+        '''
+        # Split the sentence into tokens
+        tokens = sentence.split()
+
+        # Check if the sentence is already shorter than the desired length
+        if len(tokens) <= num_tokens:
+            return sentence
+
+        # Truncate the sentence by removing the last tokens
+        truncated_tokens = tokens[:num_tokens]
+
+        # Join the truncated tokens back into a sentence
+        truncated_sentence = ' '.join(truncated_tokens)
+
+        # Add ellipsis if the original sentence was longer than the truncated sentence
+        if len(tokens) > num_tokens:
+            truncated_sentence += '...'
+
+        return truncated_sentence
+
     def get_company_report_usa(self, ticker, company_name):
         '''
         USA 기업 리포트 요약
@@ -303,19 +327,11 @@ class Main():
 
             document = re.sub('[^A-Za-z0-9가-힣ㄱ-ㅎㅏ-ㅣ\\s]+', '', document)
 
-            # Load GPT model and tokenizer
-            model_name = "gpt2"
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            model = AutoModelForCausalLM.from_pretrained(model_name)
-
             # Set the maximum sequence length
             max_length = 1024
 
-            # Tokenize the text
-            input_ids = tokenizer.encode(document, max_length=max_length, truncation=True)
-
             # Decode the tokenized input
-            modified_text = tokenizer.decode(input_ids)
+            modified_text = self.truncate_sentence(document, max_length)
             prompt = f"The following text is part of the {company_name} report. Please summarize the main business aspects of this company using bullet points in 5 to 7 sentences or less:\n\n" + modified_text
             result = self.chatGPT(prompt, YOUR_API_KEY)
             result_list = result.split('\n\n')

@@ -10,6 +10,26 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 YOUR_API_KEY = '85Qs4r6Sa+pJp5zE/t7g7cOOg84nQ9jSw4I9ncRF4EWdt2o8p+wRv4KIx02uUR053gN4*WNddlDiZ242Rf30v/pT3Ag==*eUD3YPnrpi8gCR0in+RUDg==*+TwdK7nlgA8kOnpP9kZ8Jg=='
 
+def truncate_sentence(sentence: str, num_tokens: int) -> str:
+    # Split the sentence into tokens
+    tokens = sentence.split()
+
+    # Check if the sentence is already shorter than the desired length
+    if len(tokens) <= num_tokens:
+        return sentence
+
+    # Truncate the sentence by removing the last tokens
+    truncated_tokens = tokens[:num_tokens]
+
+    # Join the truncated tokens back into a sentence
+    truncated_sentence = ' '.join(truncated_tokens)
+
+    # Add ellipsis if the original sentence was longer than the truncated sentence
+    if len(tokens) > num_tokens:
+        truncated_sentence += '...'
+
+    return truncated_sentence
+
 def summarize_text(text, API_KEY=YOUR_API_KEY):
     str_decoded = cryptocode.decrypt(API_KEY, "openai")
     # set api key
@@ -27,7 +47,7 @@ def summarize_text(text, API_KEY=YOUR_API_KEY):
         engine="text-davinci-003",
         prompt=("The following text is part of a corporate report. Please summarize the main aspects of this company in 5 sentences or less. using bullet pointsThe following text is part of a corporate report. Please summarize the main aspects of this company using bullet points in 5 to 7 sentences or less:\n\n" + text),
         temperature=0.3,
-        max_tokens=2096,
+        max_tokens=4097,
         top_p=0.5,
         frequency_penalty=0,
         presence_penalty=0
@@ -88,19 +108,21 @@ document = document_parts[1]
 # 가져온 텍스트 데이터를 출력합니다.
 # print(text_data)
 
-# Load GPT model and tokenizer
-model_name = "gpt2"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
+modified_text = truncate_sentence(document, 2096)
 
-# Set the maximum sequence length
-max_length = 1024
-
-# Tokenize the text
-input_ids = tokenizer.encode(document, max_length=max_length, truncation=True)
-
-# Decode the tokenized input
-modified_text = tokenizer.decode(input_ids)
+# # Load GPT model and tokenizer
+# model_name = "gpt2"
+# tokenizer = AutoTokenizer.from_pretrained(model_name)
+# model = AutoModelForCausalLM.from_pretrained(model_name)
+#
+# # Set the maximum sequence length
+# max_length = 1024
+#
+# # Tokenize the text
+# input_ids = tokenizer.encode(document, max_length=max_length, truncation=True)
+#
+# # Decode the tokenized input
+# modified_text = tokenizer.decode(input_ids)
 
 print(modified_text)
 
