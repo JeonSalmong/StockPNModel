@@ -39,9 +39,10 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-YOUR_API_KEY = '85Qs4r6Sa+pJp5zE/t7g7cOOg84nQ9jSw4I9ncRF4EWdt2o8p+wRv4KIx02uUR053gN4*WNddlDiZ242Rf30v/pT3Ag==*eUD3YPnrpi8gCR0in+RUDg==*+TwdK7nlgA8kOnpP9kZ8Jg=='
+YOUR_API_KEY = '/tPRp8i8i5JZSJzTzIqgkTkVxW/woco3IPgQjbGd2WT1FR/YVq/4UOzOPlbJ+KWKHJQu*MECY0yRQrU5ex5Sy8dEaMg==*ivWbFyEa4Vnqp3ZChGNiHA==*fN6qe2nzYq0km9oBOlZx6A=='
 
 os_type = platform.system()
+IS_GPT = False
 
 class Main():
 
@@ -253,8 +254,12 @@ class Main():
         # company_info = soup.find('div', {'class': 'symbol-page-header__description'}).text.strip()
 
         logger.info("Company: {}".format(company_name))
-        report = self.get_company_report_usa(ticker, company_name)
-        logger.info("Summary: {}".format(report))
+        report = ''
+        if IS_GPT:
+            report = self.get_company_report_usa(ticker, company_name)  ############################################# 기업 리포트 요약 다른 걸로 대체해야 함
+            logger.info("Summary: {}".format(report))
+        else :
+            report = ''
         self.total_article_us.append([ticker, self.date, self.time, article, company_name, report])
 
     def truncate_sentence(self, sentence: str, num_tokens: int) -> str:
@@ -548,12 +553,12 @@ class Main():
         pre_article = ''
         stock_code = ''
         stock_name = ''
-        close = ''
-        diff = ''
-        open = ''
-        high = ''
-        low = ''
-        volume = ''
+        close = 0
+        diff = 0
+        open = 0
+        high = 0
+        low = 0
+        volume = 0
 
         for articles in self.total_article:
             for article in articles:
@@ -575,7 +580,7 @@ class Main():
                     ## chatGPT 감성분석 part
                     chatresult = ''
 
-                    if pre_article != article:
+                    if IS_GPT:
                         # ChatGPT result
                         prompt = article + ' 이 문장이 긍정문이야? 부정문이야?'
 
@@ -586,8 +591,8 @@ class Main():
 
                         # 긍/부정 결과 판단
                         chatresult = self.get_result_pn(result_gpt_txt)
-
-                    pre_article = article
+                    else:
+                        chatresult = self.get_result_pn(article)
 
                     self.stock_data_dict['gpt_pn'].append(chatresult)
 
@@ -602,12 +607,12 @@ class Main():
 
                     stock_info_df = self.get_stock_info_df(stock_code)
                     for i, row in stock_info_df.iterrows():
-                        close = row['close']
-                        diff = row['diff']
-                        open = row['open']
-                        high = row['high']
-                        low = row['low']
-                        volume = row['volume']
+                        close = (lambda x: 0 if x is None or x == 0 else x)(row['close'])
+                        diff = (lambda x: 0 if x is None or x == 0 else x)(row['diff'])
+                        open = (lambda x: 0 if x is None or x == 0 else x)(row['open'])
+                        high = (lambda x: 0 if x is None or x == 0 else x)(row['high'])
+                        low = (lambda x: 0 if x is None or x == 0 else x)(row['low'])
+                        volume = (lambda x: 0 if x is None or x == 0 else x)(row['volume'])
 
                     now_day = datetime.now().strftime('%Y-%m-%d')
                     current_time = datetime.now().strftime('%H:%M')
@@ -1042,30 +1047,34 @@ class Main():
         except Exception as ex:
             logger.info(f'SRIM 계산 에러!! : {ex}')
 
-        try:
-            # 기업정보Report
-            object1 = soup.find("div", attrs={"class": "um_bssummary"})
-            value1 = object1.find('h3')
-            value2 = object1.find('li')
+        result_gpt_txt = ''
+        if IS_GPT:
+            try:
+                # 기업정보Report
+                object1 = soup.find("div", attrs={"class": "um_bssummary"})
+                value1 = object1.find('h3')
+                value2 = object1.find('li')
 
-            # ChatGPT result
-            prompt = f"Please summarize the following text using bullet points:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
-            logger.info(f'기업정보Report Original: {prompt}')
-            word_to_check = '동사는'
-            if word_to_check in prompt:
-                prompt = prompt.replace(word_to_check, '')
-            result_gpt_txt = self.chatGPT(prompt).strip()
+                # ChatGPT result
+                prompt = f"Please summarize the following text using bullet points:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
+                logger.info(f'기업정보Report Original: {prompt}')
+                word_to_check = '동사는'
+                if word_to_check in prompt:
+                    prompt = prompt.replace(word_to_check, '')
+                result_gpt_txt = self.chatGPT(prompt).strip()
 
-            # 문장 구분을 위한 패턴
-            sentence_pattern = re.compile(r'.+?[.?!]')
+                # 문장 구분을 위한 패턴
+                sentence_pattern = re.compile(r'.+?[.?!]')
 
-            # 문단을 문장으로 분리
-            sentences = sentence_pattern.findall(result_gpt_txt)
-            result_gpt_txt = sentences[0].strip()
+                # 문단을 문장으로 분리
+                sentences = sentence_pattern.findall(result_gpt_txt)
+                result_gpt_txt = sentences[0].strip()
 
-            logger.info(f'기업정보Report GPT: {result_gpt_txt}')
-        except Exception as ex:
-            logger.info(f'기업정보Report 에러!! : {ex}')
+                logger.info(f'기업정보Report GPT: {result_gpt_txt}')
+            except Exception as ex:
+                logger.info(f'기업정보Report 에러!! : {ex}')
+        else:
+            result_gpt_txt = ''
 
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
