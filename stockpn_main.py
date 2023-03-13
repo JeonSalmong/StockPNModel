@@ -39,10 +39,10 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-YOUR_API_KEY = '/tPRp8i8i5JZSJzTzIqgkTkVxW/woco3IPgQjbGd2WT1FR/YVq/4UOzOPlbJ+KWKHJQu*MECY0yRQrU5ex5Sy8dEaMg==*ivWbFyEa4Vnqp3ZChGNiHA==*fN6qe2nzYq0km9oBOlZx6A=='
+YOUR_API_KEY = 'kyUZPxnXbxK9jCuS6JM4F8hUlZ9b/L5Eyy8gEwKnY69h+ckQ9a7nIKidJ+e+FqdMaXvU*tJZDdp20DvfKJhXMK5x8qQ==*E7T61eyVsy1lSf7PFlPTrg==*F2SUy7OVdpa4tU9bHvSOhA=='
 
 os_type = platform.system()
-IS_GPT = False
+IS_GPT = True
 
 class Main():
 
@@ -221,6 +221,10 @@ class Main():
             try:
                 ticker = article.split('(', 1)[1].split(')')[0]
                 if len(ticker) > 4:
+                    continue
+
+                # 해당코드가 이미 분석한 결과가 있는지 여부 체크
+                if self.is_exists(ticker, 'US'):
                     continue
 
                 self.get_company_info_usa(ticker, article)
@@ -572,7 +576,7 @@ class Main():
                         stock_name = row['name']
 
                     # 해당코드가 이미 분석한 결과가 있는지 여부 체크
-                    if self.is_exists(stock_code):
+                    if self.is_exists(stock_code, 'KO'):
                         continue
 
                     article = article.replace('-', '')
@@ -727,7 +731,7 @@ class Main():
                 return True
         return False
 
-    def is_exists(self, code):
+    def is_exists(self, code, flag):
         '''
         (KOR)
         해당코드가 이미 DB에 존재하고 있는지 여부 체크
@@ -735,7 +739,11 @@ class Main():
         :return:
         '''
 
-        sql = f"select count(*) as cnt from HDBOWN.prediction_pn where code_ = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYY-MM-DD')"
+        sql = ''
+        if flag == 'KO':
+            sql = f"select count(*) as cnt from HDBOWN.prediction_pn where code_ = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYY-MM-DD')"
+        else:
+            sql = f"select count(*) as cnt from HDBOWN.prediction_pn_us where ticker = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYY-MM-DD')"
         result_df = pd.read_sql(sql, self.conn)
         if result_df.iloc[0, 0] >= 1:
             logger.info(f'code that already exists : {code}')
