@@ -208,7 +208,7 @@ class Main():
         '''
 
         articles = []
-        for page_no in range(1, 5):
+        for page_no in range(1, 10):
             try:
                 soup = self.get_data_http_usa(page_no)
                 article_tag = soup.findAll('a', class_='content-feed__card-title-link')
@@ -260,7 +260,7 @@ class Main():
 
         logger.info("Company: {}".format(company_name))
         report = ''
-        report = self.get_exists_report(ticker, 'US')
+        report = (lambda x: '' if x is None or x == '' else x)(self.get_exists_report(ticker, 'US'))
         if len(report) == 0:
             if IS_GPT:
                 report = self.get_company_report_usa(ticker, company_name)
@@ -1081,7 +1081,8 @@ class Main():
             logger.info(f'SRIM 계산 에러!! : {ex}')
 
         result_gpt_txt = ''
-        result_gpt_txt = self.get_exists_report(code, 'KO')
+        result_gpt_txt = (lambda x: '' if x is None or x == '' else x)(self.get_exists_report(code, 'KO'))
+
         if len(result_gpt_txt) == 0:
             if IS_GPT:
                 try:
