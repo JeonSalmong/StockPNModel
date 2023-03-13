@@ -746,7 +746,7 @@ class Main():
         if flag == 'KO':
             sql = f"select count(*) as cnt from HDBOWN.prediction_pn where code_ = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYY-MM-DD')"
         else:
-            sql = f"select count(*) as cnt from HDBOWN.prediction_pn_us where ticker = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYY-MM-DD')"
+            sql = f"select count(*) as cnt from HDBOWN.prediction_pn_us where ticker = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYYMMDD')"
 
         logger.info(f'already exists check sql : {sql}')
         result_df = pd.read_sql(sql, self.conn)
