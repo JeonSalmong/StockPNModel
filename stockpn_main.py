@@ -56,6 +56,7 @@ class Main():
         self.time = datetime.now().strftime('%H%M')
 
         logger.info("OS Type : " + os_type)
+        logger.info(f"실행시작시간 : {self.date} {self.time}")
 
         ###################### Oracle cloud DB #############################################################################
         if os_type == 'Windows':
@@ -259,11 +260,13 @@ class Main():
 
         logger.info("Company: {}".format(company_name))
         report = ''
-        if IS_GPT:
-            report = self.get_company_report_usa(ticker, company_name)  ############################################# 기업 리포트 요약 다른 걸로 대체해야 함
-            logger.info("Summary: {}".format(report))
-        else :
-            report = ''
+        report = self.get_exists_report(ticker, 'US')
+        if len(report) == 0:
+            if IS_GPT:
+                report = self.get_company_report_usa(ticker, company_name)  ############################################# 기업 리포트 요약 다른 걸로 대체해야 함
+            else :
+                report = ''
+        logger.info("Summary: {}".format(report))
         self.total_article_us.append([ticker, self.date, self.time, article, company_name, report])
 
     def truncate_sentence(self, sentence: str, num_tokens: int) -> str:
@@ -744,6 +747,8 @@ class Main():
             sql = f"select count(*) as cnt from HDBOWN.prediction_pn where code_ = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYY-MM-DD')"
         else:
             sql = f"select count(*) as cnt from HDBOWN.prediction_pn_us where ticker = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYY-MM-DD')"
+
+        logger.info(f'already exists check sql : {sql}')
         result_df = pd.read_sql(sql, self.conn)
         if result_df.iloc[0, 0] >= 1:
             logger.info(f'code that already exists : {code}')
@@ -751,6 +756,24 @@ class Main():
         else:
             logger.info(f'run analysis with new code : {code}')
             return False
+
+    def get_exists_report(self, code, flag):
+        '''
+        코드에 해당하는 레포트 정보가 있으면 DB정보로 저장
+        :param code:
+        :param flag:
+        :return:
+        '''
+        sql = ''
+        if flag == 'KO':
+            sql = f"select max(report_) from HDBOWN.prediction_pn where code_ = '{code}' "
+        else:
+            sql = f"select max(report_) from HDBOWN.prediction_pn_us where ticker = '{code}' "
+        result_df = pd.read_sql(sql, self.conn)
+        if len(result_df) > 0:
+            return result_df.iloc[0, 0]
+        else:
+            return ''
 
     def get_result_pn(self, sentence):
         '''
