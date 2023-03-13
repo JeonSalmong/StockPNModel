@@ -263,10 +263,12 @@ class Main():
         report = self.get_exists_report(ticker, 'US')
         if len(report) == 0:
             if IS_GPT:
-                report = self.get_company_report_usa(ticker, company_name)  ############################################# 기업 리포트 요약 다른 걸로 대체해야 함
-            else :
+                report = self.get_company_report_usa(ticker, company_name)
+                logger.info("Summary-GPT: {}".format(report))
+            else:
                 report = ''
-        logger.info("Summary: {}".format(report))
+        else:
+            logger.info("Summary-DB: {}".format(report))
         self.total_article_us.append([ticker, self.date, self.time, article, company_name, report])
 
     def truncate_sentence(self, sentence: str, num_tokens: int) -> str:
@@ -1079,33 +1081,37 @@ class Main():
             logger.info(f'SRIM 계산 에러!! : {ex}')
 
         result_gpt_txt = ''
-        if IS_GPT:
-            try:
-                # 기업정보Report
-                object1 = soup.find("div", attrs={"class": "um_bssummary"})
-                value1 = object1.find('h3')
-                value2 = object1.find('li')
+        result_gpt_txt = self.get_exists_report(code, 'KO')
+        if len(result_gpt_txt) == 0:
+            if IS_GPT:
+                try:
+                    # 기업정보Report
+                    object1 = soup.find("div", attrs={"class": "um_bssummary"})
+                    value1 = object1.find('h3')
+                    value2 = object1.find('li')
 
-                # ChatGPT result
-                prompt = f"Please summarize the following text using bullet points:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
-                logger.info(f'기업정보Report Original: {prompt}')
-                word_to_check = '동사는'
-                if word_to_check in prompt:
-                    prompt = prompt.replace(word_to_check, '')
-                result_gpt_txt = self.chatGPT(prompt).strip()
+                    # ChatGPT result
+                    prompt = f"Please summarize the following text using bullet points:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
+                    logger.info(f'기업정보Report Original: {prompt}')
+                    word_to_check = '동사는'
+                    if word_to_check in prompt:
+                        prompt = prompt.replace(word_to_check, '')
+                    result_gpt_txt = self.chatGPT(prompt).strip()
 
-                # 문장 구분을 위한 패턴
-                sentence_pattern = re.compile(r'.+?[.?!]')
+                    # 문장 구분을 위한 패턴
+                    sentence_pattern = re.compile(r'.+?[.?!]')
 
-                # 문단을 문장으로 분리
-                sentences = sentence_pattern.findall(result_gpt_txt)
-                result_gpt_txt = sentences[0].strip()
+                    # 문단을 문장으로 분리
+                    sentences = sentence_pattern.findall(result_gpt_txt)
+                    result_gpt_txt = sentences[0].strip()
 
-                logger.info(f'기업정보Report GPT: {result_gpt_txt}')
-            except Exception as ex:
-                logger.info(f'기업정보Report 에러!! : {ex}')
+                    logger.info(f'기업정보Report GPT: {result_gpt_txt}')
+                except Exception as ex:
+                    logger.info(f'기업정보Report 에러!! : {ex}')
+            else:
+                result_gpt_txt = ''
         else:
-            result_gpt_txt = ''
+            logger.info(f'기업정보Report DB: {result_gpt_txt}')
 
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
