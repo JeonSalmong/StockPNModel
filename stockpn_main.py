@@ -92,7 +92,7 @@ class Main():
         articleCnt = 1
         self.get_article(self.date)
         while True:
-            if len(self.total_article) < 20:
+            if len(self.total_article) < 10:
                 now = datetime.now()
                 one_day_ago = now - timedelta(days=articleCnt)
                 self.get_article(one_day_ago.strftime('%Y%m%d'))
