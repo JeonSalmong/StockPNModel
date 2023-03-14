@@ -68,7 +68,7 @@ class Main():
         if os_type == 'Windows':
             self.sleep_time = 0
         else:
-            self.sleep_time = 65
+            self.sleep_time = 10
 
         self.conn = cx_Oracle.connect(user='HDBOWN', password='Qwer1234!@#$', dsn='ppanggoodoracledb_high')
         self.cursor = self.conn.cursor()
