@@ -768,9 +768,9 @@ class Main():
         '''
         sql = ''
         if flag == 'KO':
-            sql = f"select max(report_) from HDBOWN.prediction_pn where code_ = '{code}' "
+            sql = f"select max(report_) from HDBOWN.prediction_pn where code_ = '{code}' and report_ not like '%ChatGPT 에러가 발생 했습니다%'"
         else:
-            sql = f"select max(report_) from HDBOWN.prediction_pn_us where ticker = '{code}' "
+            sql = f"select max(report_) from HDBOWN.prediction_pn_us where ticker = '{code}' and report_ not like '%ChatGPT 에러가 발생 했습니다%'"
         result_df = pd.read_sql(sql, self.conn)
         if len(result_df) > 0:
             return result_df.iloc[0, 0]
@@ -1099,12 +1099,12 @@ class Main():
                         prompt = prompt.replace(word_to_check, '')
                     result_gpt_txt = self.chatGPT(prompt).strip()
 
-                    # 문장 구분을 위한 패턴
-                    sentence_pattern = re.compile(r'.+?[.?!]')
-
-                    # 문단을 문장으로 분리
-                    sentences = sentence_pattern.findall(result_gpt_txt)
-                    result_gpt_txt = sentences[0].strip()
+                    # # 문장 구분을 위한 패턴
+                    # sentence_pattern = re.compile(r'.+?[.?!]')
+                    #
+                    # # 문단을 문장으로 분리
+                    # sentences = sentence_pattern.findall(result_gpt_txt)
+                    # result_gpt_txt = sentences[0].strip()
 
                     logger.info(f'기업정보Report GPT: {result_gpt_txt}')
                 except Exception as ex:
