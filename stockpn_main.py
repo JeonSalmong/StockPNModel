@@ -42,7 +42,7 @@ logger.addHandler(stream_handler)
 YOUR_API_KEY = 'kyUZPxnXbxK9jCuS6JM4F8hUlZ9b/L5Eyy8gEwKnY69h+ckQ9a7nIKidJ+e+FqdMaXvU*tJZDdp20DvfKJhXMK5x8qQ==*E7T61eyVsy1lSf7PFlPTrg==*F2SUy7OVdpa4tU9bHvSOhA=='
 
 os_type = platform.system()
-IS_GPT = True
+IS_GPT = False
 
 class Main():
 
