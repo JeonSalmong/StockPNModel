@@ -39,10 +39,10 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-YOUR_API_KEY = 'kyUZPxnXbxK9jCuS6JM4F8hUlZ9b/L5Eyy8gEwKnY69h+ckQ9a7nIKidJ+e+FqdMaXvU*tJZDdp20DvfKJhXMK5x8qQ==*E7T61eyVsy1lSf7PFlPTrg==*F2SUy7OVdpa4tU9bHvSOhA=='
+YOUR_API_KEY = '9HrV3IFVuKdW1gnnHaGy6EfzneD1c+LYDl6lAd7DZ0TcAa9W0PE93SQzZFqTQmEIstld*2GnsBeHj/Bot13us/0DU+Q==*aqFRLw2Ux+jGtcoK4Lq+dQ==*LSNRLoxKp5fWW65DBnGV2w=='
 
 os_type = platform.system()
-IS_GPT = False
+IS_GPT = True
 
 class Main():
 
