@@ -39,7 +39,8 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-YOUR_API_KEY = '9HrV3IFVuKdW1gnnHaGy6EfzneD1c+LYDl6lAd7DZ0TcAa9W0PE93SQzZFqTQmEIstld*2GnsBeHj/Bot13us/0DU+Q==*aqFRLw2Ux+jGtcoK4Lq+dQ==*LSNRLoxKp5fWW65DBnGV2w=='
+# YOUR_API_KEY = '9HrV3IFVuKdW1gnnHaGy6EfzneD1c+LYDl6lAd7DZ0TcAa9W0PE93SQzZFqTQmEIstld*2GnsBeHj/Bot13us/0DU+Q==*aqFRLw2Ux+jGtcoK4Lq+dQ==*LSNRLoxKp5fWW65DBnGV2w=='
+YOUR_API_KEY = 'XZPcwFh3sDNF5ubvhiFkuXkXRuIxxcDXNAtIe3QvcAyYhpk6Ft4tEzSw/SGmBBQSsq7u*5S/2/laTqhpA1cZsbMgzsw==*oldzeHRCsuQ3vwe0AdOfHQ==*dgx9cIxXL6gXUMeJW1LkpA=='
 
 os_type = platform.system()
 IS_GPT = True
@@ -358,7 +359,7 @@ class Main():
 
             # Decode the tokenized input
             modified_text = self.truncate_sentence(document, max_length)
-            prompt = f"The following text is part of the {company_name} report. Please summarize the main business aspects of this company using bullet points in 5 to 7 sentences or less:\n\n" + modified_text
+            prompt = f"The following text is part of the {company_name} report. Please summarize the main business aspects of this company using bullet points in 3 to 4 sentences or less:\n\n" + modified_text
             result = self.chatGPT(prompt, YOUR_API_KEY)
             result_list = result.split('\n\n')
             if len(result_list) > 0:

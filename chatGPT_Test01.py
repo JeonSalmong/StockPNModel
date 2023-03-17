@@ -3,7 +3,7 @@ import argparse
 
 import cryptocode
 
-YOUR_API_KEY = '85Qs4r6Sa+pJp5zE/t7g7cOOg84nQ9jSw4I9ncRF4EWdt2o8p+wRv4KIx02uUR053gN4*WNddlDiZ242Rf30v/pT3Ag==*eUD3YPnrpi8gCR0in+RUDg==*+TwdK7nlgA8kOnpP9kZ8Jg=='
+YOUR_API_KEY = 'XZPcwFh3sDNF5ubvhiFkuXkXRuIxxcDXNAtIe3QvcAyYhpk6Ft4tEzSw/SGmBBQSsq7u*5S/2/laTqhpA1cZsbMgzsw==*oldzeHRCsuQ3vwe0AdOfHQ==*dgx9cIxXL6gXUMeJW1LkpA=='
 
 
 def chatGPT(prompt, API_KEY=YOUR_API_KEY):

@@ -45,7 +45,7 @@ def summarize_text(text, API_KEY=YOUR_API_KEY):
     # OpenAI 문장 요약 API 요청
     response = openai.Completion.create(
         engine="text-davinci-003",
-        prompt=("The following text is part of a corporate report. Please summarize the main aspects of this company in 5 sentences or less. using bullet pointsThe following text is part of a corporate report. Please summarize the main aspects of this company using bullet points in 5 to 7 sentences or less:\n\n" + text),
+        prompt=("The following text is part of a corporate report. Please summarize the main aspects of this company in 5 sentences or less. using bullet points:\n\n" + text),
         temperature=0.3,
         max_tokens=2096,
         top_p=0.5,
