@@ -40,7 +40,7 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 # YOUR_API_KEY = '9HrV3IFVuKdW1gnnHaGy6EfzneD1c+LYDl6lAd7DZ0TcAa9W0PE93SQzZFqTQmEIstld*2GnsBeHj/Bot13us/0DU+Q==*aqFRLw2Ux+jGtcoK4Lq+dQ==*LSNRLoxKp5fWW65DBnGV2w=='
-YOUR_API_KEY = 'XZPcwFh3sDNF5ubvhiFkuXkXRuIxxcDXNAtIe3QvcAyYhpk6Ft4tEzSw/SGmBBQSsq7u*5S/2/laTqhpA1cZsbMgzsw==*oldzeHRCsuQ3vwe0AdOfHQ==*dgx9cIxXL6gXUMeJW1LkpA=='
+YOUR_API_KEY = 'G3o657ixgjIAmM2s6fc/Sy2+Ck2uxY3J7LV6XGo1kqorGBF1BKBKEc+785SdxkLoTeL2*pA8YH3QNZ5S75Td4B0LiwQ==*mu7choDFiuHNe1nNRAoFkQ==*cR61zG1TmNwu6Jno5ObGKQ=='
 
 os_type = platform.system()
 IS_GPT = True
