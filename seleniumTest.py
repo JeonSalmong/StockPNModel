@@ -14,7 +14,8 @@ chrome_options.add_argument("--no-sandbox")  # 사이트 격리 비활성화 (�
 chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)")  # User-Agent 정보 추가
 chrome_options.add_argument("--accept-language=en-US,en")  # Accept-Language 정보 추가
 
-service = Service('D:\Project\driver\chromedriver')  # 크롬 드라이버 경로
+# service = Service('D:\Project\driver\chromedriver')  # 크롬 드라이버 경로
+service = Service('/usr/local/bin/chromedriver')
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # 웹 페이지 렌더링
