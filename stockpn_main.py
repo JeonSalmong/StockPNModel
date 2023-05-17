@@ -1,31 +1,27 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-
 from tensorflow import keras
 import numpy as np
 import json
 import os
 from konlpy.tag import Okt
 import nltk
-
 import pandas as pd
 import re
-
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import logging
-
 import cx_Oracle
-
 import openai
-
 import cryptocode
-
 import platform
-
 import math
-
 import bardapi
+
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 
 # 로그 생성
 logger = logging.getLogger()
@@ -63,17 +59,32 @@ class Main():
         logger.info("OS Type : " + os_type)
         logger.info(f"실행시작시간 : {self.date} {self.time}")
 
+        # Selenium 웹 드라이버 설정
+        self.chrome_options = Options()
+        self.chrome_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
+        self.chrome_options.add_argument("--disable-gpu")  # GPU 가속 비활성화 (필요한 경우)
+        self.chrome_options.add_argument("--no-sandbox")  # 사이트 격리 비활성화 (필요한 경우)
+
+        # 원하는 헤더 정보 추가
+        self.chrome_options.add_argument(
+            "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)")  # User-Agent 정보 추가
+        self.chrome_options.add_argument("--accept-language=en-US,en")  # Accept-Language 정보 추가
+
         ###################### Oracle cloud DB #############################################################################
         if os_type == 'Windows':
             cx_Oracle.init_oracle_client(lib_dir=r".\resource\instantclient_19_17")
+            self.service = Service('D:\Project\driver\chromedriver')  # 크롬 드라이버 경로
         else:
             cx_Oracle.init_oracle_client(lib_dir="/usr/lib/oracle/21/client64/lib")
+            self.service = Service('/usr/local/bin/chromedriver')  # 크롬 드라이버 경로
+
+        self.driver = webdriver.Chrome(service=self.service, options=self.chrome_options)
 
         # openai call sleep time 설정
         if os_type == 'Windows':
             self.sleep_time = 0
         else:
-            self.sleep_time = 3
+            self.sleep_time = 0
 
         self.conn = cx_Oracle.connect(user='HDBOWN', password='Qwer1234!@#$', dsn='ppanggoodoracledb_high')
         self.cursor = self.conn.cursor()
@@ -91,6 +102,8 @@ class Main():
         ## USA 분석 Part ####################################################
         self.total_article_us = []
         self.get_article_usa()
+        # 드라이버 종료
+        self.driver.quit()
         self.nlp_article_usa()
 
         ## KOR 분석 Part ####################################################
@@ -195,15 +208,14 @@ class Main():
         :return:
         '''
 
-        page = page_no
-        url = 'https://www.nasdaq.com/news-and-insights/topic/markets/stocks/page/' + str(page)
+        # 웹 페이지 렌더링
+        self.driver.get('https://www.nasdaq.com/news-and-insights/topic/markets/stocks/page/' + str(page_no))
 
-        headers = {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/84.0.4147.135 Safari/537.36'
-        }
-        res = requests.get(url, headers=headers)
-        soup = BeautifulSoup(res.text, 'html.parser')
+        # 최종 랜더링된 HTML 소스 얻기
+        html_source = self.driver.page_source
+
+        # BeautifulSoup을 사용하여 파싱
+        soup = BeautifulSoup(html_source, 'html.parser')
         return soup
 
     def get_article_usa(self):
@@ -216,7 +228,8 @@ class Main():
         for page_no in range(1, 10):
             try:
                 soup = self.get_data_http_usa(page_no)
-                article_tag = soup.findAll('a', class_='content-feed__card-title-link')
+                # article_tag = soup.findAll('a', class_='content-feed__card-title-link')
+                article_tag = soup.findAll('a', class_='jupiter22-c-article-list__item_title')
 
                 for article in article_tag:
                     articles.append(article.text)
@@ -234,9 +247,8 @@ class Main():
                     continue
 
                 self.get_company_info_usa(ticker, article)
-                if os_type == 'Windows':
-                    break
-
+                # if os_type == 'Windows':
+                #     break
             except:
                 continue
 
@@ -268,7 +280,8 @@ class Main():
         report = (lambda x: '' if x is None or x == '' else x)(self.get_exists_report(ticker, 'US'))
         if len(report) == 0:
             if IS_GPT:
-                report = self.get_company_report_usa(ticker, company_name)
+                # report = self.get_company_report_usa(ticker, company_name)
+                report = self.get_company_report_usa2(ticker, company_name, article)
                 logger.info("Summary-GPT: {}".format(report))
             else:
                 report = ''
@@ -304,7 +317,7 @@ class Main():
 
     def get_company_report_usa(self, ticker, company_name):
         '''
-        USA 기업 리포트 요약
+        USA 기업 리포트 요약 - 사용하지 않음
         :param ticker:
         :return:
         '''
@@ -375,6 +388,15 @@ class Main():
             logger.info(f'unable to summarize the company report. : {ex}')
             return 'unable to summarize the company report.'
 
+    def get_company_report_usa2(self, ticker, company_name, article):
+        try:
+            prompt = f"The following text is {company_name}'s article today. {article}. Please summarize the main business aspects of this company using bullet points in 3 to 4 sentences"
+            # result = self.chatGPT(prompt, YOUR_API_KEY)
+            result = self.callBard(prompt)
+            return result
+        except Exception as ex:
+            logger.info(f'unable to summarize the company report. : {ex}')
+            return 'unable to summarize the company report.'
 
     def nlp_article_usa(self):
         '''
