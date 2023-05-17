@@ -74,11 +74,14 @@ class Main():
         if os_type == 'Windows':
             cx_Oracle.init_oracle_client(lib_dir=r".\resource\instantclient_19_17")
             self.service = Service('D:\Project\driver\chromedriver')  # 크롬 드라이버 경로
+            self.driver = webdriver.Chrome(service=self.service, options=self.chrome_options)
         else:
             cx_Oracle.init_oracle_client(lib_dir="/usr/lib/oracle/21/client64/lib")
+            # Chrome 바이너리 경로 설정
+            self.chrome_binary_path = '/usr/bin/google-chrome-stable'
+            self.chrome_options.binary_location = self.chrome_binary_path
             self.service = Service('/usr/local/bin/chromedriver')  # 크롬 드라이버 경로
-
-        self.driver = webdriver.Chrome(service=self.service, options=self.chrome_options)
+            self.driver = webdriver.Chrome(executable_path='/usr/local/bin/chromedriver', options=self.chrome_options)
 
         # openai call sleep time 설정
         if os_type == 'Windows':
