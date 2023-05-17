@@ -25,6 +25,8 @@ import platform
 
 import math
 
+import bardapi
+
 # 로그 생성
 logger = logging.getLogger()
 
@@ -44,6 +46,8 @@ YOUR_API_KEY = 'G3o657ixgjIAmM2s6fc/Sy2+Ck2uxY3J7LV6XGo1kqorGBF1BKBKEc+785SdxkLo
 
 os_type = platform.system()
 IS_GPT = True
+
+os.environ['_BARD_API_KEY']="WQhZf3gnVwZeaViB9fzmsfl_hjviLE3O0fWQfkCDACprxXMODVyz_-jygXM5D3XnrwKubQ."
 
 class Main():
 
@@ -69,7 +73,7 @@ class Main():
         if os_type == 'Windows':
             self.sleep_time = 0
         else:
-            self.sleep_time = 10
+            self.sleep_time = 3
 
         self.conn = cx_Oracle.connect(user='HDBOWN', password='Qwer1234!@#$', dsn='ppanggoodoracledb_high')
         self.cursor = self.conn.cursor()
@@ -360,7 +364,8 @@ class Main():
             # Decode the tokenized input
             modified_text = self.truncate_sentence(document, max_length)
             prompt = f"The following text is part of the {company_name} report. Please summarize the main business aspects of this company using bullet points in 3 to 4 sentences or less:\n\n" + modified_text
-            result = self.chatGPT(prompt, YOUR_API_KEY)
+            # result = self.chatGPT(prompt, YOUR_API_KEY)
+            result = self.callBard(prompt)
             result_list = result.split('\n\n')
             if len(result_list) > 0:
                 return result_list[-1].strip()
@@ -597,7 +602,8 @@ class Main():
                         # 파파고 번역 추가
                         prompt = self.trans_papago(prompt)
 
-                        result_gpt_txt = self.chatGPT(prompt).strip()
+                        # result_gpt_txt = self.chatGPT(prompt).strip()
+                        result_gpt_txt = self.callBard(prompt).strip()
 
                         # 긍/부정 결과 판단
                         chatresult = self.get_result_pn(result_gpt_txt)
@@ -649,7 +655,7 @@ class Main():
     def chatGPT(self, prompt, API_KEY=YOUR_API_KEY):
         '''
         (KOR)
-        ChatGPT 감석분석 실행
+        ChatGPT 감성분석 실행
         :param prompt:
         :param API_KEY:
         :return:
@@ -674,6 +680,22 @@ class Main():
         except Exception as ex:
             logger.info('ChatGPT 에러가 발생 했습니다')
             return 'ChatGPT 에러가 발생 했습니다'
+
+    def callBard(self, prompt):
+        '''
+        (KOR)
+        Bard 감성분석 실행
+        :param prompt:
+        :return:
+        '''
+        time.sleep(self.sleep_time)  # API 호출 타임
+        # Call the Bard API
+        try:
+            response = bardapi.core.Bard().get_answer(prompt)['content']
+            return response
+        except Exception as ex:
+            logger.info('Bard 에러가 발생 했습니다.')
+            return 'Bard 에러가 발생 했습니다.'
 
     def trans_papago(self, content):
         '''
@@ -769,9 +791,9 @@ class Main():
         '''
         sql = ''
         if flag == 'KO':
-            sql = f"select max(report_) from HDBOWN.prediction_pn where code_ = '{code}' and report_ not like '%ChatGPT 에러가 발생 했습니다%'"
+            sql = f"select max(report_) from HDBOWN.prediction_pn where code_ = '{code}' and report_ not like '%에러가 발생 했습니다%'"
         else:
-            sql = f"select max(report_) from HDBOWN.prediction_pn_us where ticker = '{code}' and report_ not like '%ChatGPT 에러가 발생 했습니다%'"
+            sql = f"select max(report_) from HDBOWN.prediction_pn_us where ticker = '{code}' and report_ not like '%에러가 발생 했습니다%'"
         result_df = pd.read_sql(sql, self.conn)
         if len(result_df) > 0:
             return result_df.iloc[0, 0]
@@ -1098,7 +1120,8 @@ class Main():
                     word_to_check = '동사는'
                     if word_to_check in prompt:
                         prompt = prompt.replace(word_to_check, '')
-                    result_gpt_txt = self.chatGPT(prompt).strip()
+                    # result_gpt_txt = self.chatGPT(prompt).strip()
+                    result_gpt_txt = self.callBard(prompt).strip()
 
                     # # 문장 구분을 위한 패턴
                     # sentence_pattern = re.compile(r'.+?[.?!]')
