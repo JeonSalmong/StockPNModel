@@ -4,8 +4,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 
+# Chrome 바이너리 경로 설정
+chrome_binary_path = '/usr/bin/google-chrome-stable'
+
 # Selenium 웹 드라이버 설정
 chrome_options = Options()
+chrome_options.binary_location = chrome_binary_path
 chrome_options.add_argument("--headless")  # 브라우저 창을 열지 않고 실행
 chrome_options.add_argument("--disable-gpu")  # GPU 가속 비활성화 (필요한 경우)
 chrome_options.add_argument("--no-sandbox")  # 사이트 격리 비활성화 (필요한 경우)
