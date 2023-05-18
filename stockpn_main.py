@@ -1215,6 +1215,15 @@ class Main():
                 "insert into HDBOWN.prediction_detail_ko (key_, date_, code_, ticker_desc1, ticker_desc2, sise_52_price, sise_revenue_rate, sise_siga_tot, sise_siga_tot2, sise_issue_stock_normal, toja_discision, toja_prop_price, toja_eps, toja_per, toja_comp, srim_revenue_rate, srim_jibea, srim_roa, srim_roe, srim_value, srim_issue_stock, srim_prop_price, srim_10_price, srim_20_price) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14, :15, :16, :17, :18, :19, :20, :21, :22, :23, :24)", df2.values.tolist())
             self.conn.commit()
             logger.info('DB저장 완료')
+
+            del_sql1 = "delete from PREDICTION_PN_US where 1=1 and regexp_like(report_, 'Error|에러')"
+            del_sql2 = "delete from PREDICTION_PN where 1=1 and regexp_like(report_, 'Error|에러')"
+
+            self.cursor.executemany(del_sql1)
+            self.cursor.executemany(del_sql2)
+            self.conn.commit()
+            logger.info('DB 클리어 완료')
+
         except Exception as ex:
             logger.info(f'DB저장 에러!! : {ex}')
 
