@@ -393,7 +393,8 @@ class Main():
 
     def get_company_report_usa2(self, ticker, company_name, article):
         try:
-            prompt = f"The following text is {company_name}'s article today. {article}. Please summarize the main business aspects of this company using bullet points in 3 to 4 sentences"
+            # prompt = f"The following text is {company_name}'s article today. {article}. Please summarize the main business aspects of this company using bullet points in 3 to 4 sentences"
+            prompt = f"다음 문장은 나스닥 상장사 {company_name}의 오늘 뉴스 타이틀 입니다. {article}. 이 회사의 간단한 소개 및 현재 상황을 문장 기호를 사용하여 5문장 이내로 알려 주세요. (물론입니다.는 생략 해 주세요)"
             # result = self.chatGPT(prompt, YOUR_API_KEY)
             result = self.callBard(prompt)
             return result
