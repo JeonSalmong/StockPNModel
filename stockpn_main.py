@@ -1219,8 +1219,8 @@ class Main():
             del_sql1 = "delete from PREDICTION_PN_US where 1=1 and regexp_like(report_, 'Error|에러')"
             del_sql2 = "delete from PREDICTION_PN where 1=1 and regexp_like(report_, 'Error|에러')"
 
-            self.cursor.executemany(del_sql1)
-            self.cursor.executemany(del_sql2)
+            self.cursor.execute(del_sql1)
+            self.cursor.execute(del_sql2)
             self.conn.commit()
             logger.info('DB 클리어 완료')
 
