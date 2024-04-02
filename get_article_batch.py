@@ -1,27 +1,18 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-from tensorflow import keras
-import numpy as np
-import json
-import os
-from konlpy.tag import Okt
-import nltk
 import pandas as pd
 import re
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import logging
 import cx_Oracle
-import openai
-import cryptocode
+
 import platform
 import math
-import bardapi
+
 
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 # 로그 생성
@@ -38,13 +29,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-# YOUR_API_KEY = '9HrV3IFVuKdW1gnnHaGy6EfzneD1c+LYDl6lAd7DZ0TcAa9W0PE93SQzZFqTQmEIstld*2GnsBeHj/Bot13us/0DU+Q==*aqFRLw2Ux+jGtcoK4Lq+dQ==*LSNRLoxKp5fWW65DBnGV2w=='
-YOUR_API_KEY = 'G3o657ixgjIAmM2s6fc/Sy2+Ck2uxY3J7LV6XGo1kqorGBF1BKBKEc+785SdxkLoTeL2*pA8YH3QNZ5S75Td4B0LiwQ==*mu7choDFiuHNe1nNRAoFkQ==*cR61zG1TmNwu6Jno5ObGKQ=='
-
 os_type = platform.system()
-IS_GPT = True
-
-os.environ['_BARD_API_KEY']="WQhZf3gnVwZeaViB9fzmsfl_hjviLE3O0fWQfkCDACprxXMODVyz_-jygXM5D3XnrwKubQ."
 
 class Main():
 
@@ -74,15 +59,14 @@ class Main():
         ###################### Oracle cloud DB #############################################################################
         if os_type == 'Windows':
             cx_Oracle.init_oracle_client(lib_dir=r".\resource\instantclient_19_17")
-            self.service = Service('D:\Project\driver\chromedriver')  # 크롬 드라이버 경로
-            self.driver = webdriver.Chrome(service=self.service, options=self.chrome_options)
+            self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=self.chrome_options)
         else:
-            cx_Oracle.init_oracle_client(lib_dir="/usr/lib/oracle/21/client64/lib")
+            cx_Oracle.init_oracle_client(lib_dir="/usr/lib/oracle/19.22/client64/lib")
             # Chrome 바이너리 경로 설정
             self.chrome_binary_path = '/usr/bin/google-chrome-stable'
             self.chrome_options.binary_location = self.chrome_binary_path
-            self.service = Service('/usr/local/bin/chromedriver')  # 크롬 드라이버 경로
-            self.driver = webdriver.Chrome(executable_path='/usr/local/bin/chromedriver', options=self.chrome_options)
+            self.service = Service('/usr/local/bin/chromedriver/chromedriver')  # 크롬 드라이버 경로
+            self.driver = webdriver.Chrome(service=self.service, options=self.chrome_options)
 
         # openai call sleep time 설정
         if os_type == 'Windows':
@@ -90,7 +74,7 @@ class Main():
         else:
             self.sleep_time = 0
 
-        self.conn = cx_Oracle.connect(user='HDBOWN', password='Qwer1234!@#$', dsn='ppanggoodoracledb_high')
+        self.conn = cx_Oracle.connect(user='ADMIN', password='Qwer1234!@#$', dsn='ppanggoodoracledb_high')
         self.cursor = self.conn.cursor()
 
         self.stock_data_dict = {'key': [], 'date': [], 'time': [], 'code': [], 'name': [], 'content': [], 'pn':[], 'ratio':[],
@@ -103,12 +87,6 @@ class Main():
 
         self.total_article = []
 
-        ## USA 분석 Part ####################################################
-        self.total_article_us = []
-        self.get_article_usa()
-        # 드라이버 종료
-        self.driver.quit()
-        self.nlp_article_usa()
 
         ## KOR 분석 Part ####################################################
         articleCnt = 1
@@ -121,20 +99,6 @@ class Main():
                 articleCnt += 1
             else:
                 break
-
-        self.negative_word_df = None
-        self.get_negative_word()
-
-        self.model = keras.models.load_model('./resource/pnmodel.h5', compile=False)
-        self.train_data = self.read_data('./resource/ratings_train.txt')
-        self.test_data = self.read_data('./resource/ratings_test.txt')
-        self.okt = Okt()
-        self.train_docs = None
-        self.test_docs = None
-        self.make_docs_from_json()
-        self.tokens = [t for d in self.train_docs for t in d[0]]
-        self.text = nltk.Text(self.tokens, name='NMSC')
-        self.selected_words = [f[0] for f in self.text.vocab().most_common(5000)]
 
         self.stock_df = None
         self.get_stock_df()
@@ -205,360 +169,6 @@ class Main():
 
         return title_list
 
-    def get_data_http_usa(self, page_no):
-        '''
-        USA 기사 가져오기
-        :param page_no:
-        :return:
-        '''
-
-        # 웹 페이지 렌더링
-        self.driver.get('https://www.nasdaq.com/news-and-insights/topic/markets/stocks/page/' + str(page_no))
-
-        # 최종 랜더링된 HTML 소스 얻기
-        html_source = self.driver.page_source
-
-        # BeautifulSoup을 사용하여 파싱
-        soup = BeautifulSoup(html_source, 'html.parser')
-        return soup
-
-    def get_article_usa(self):
-        '''
-        USA 기사 html 파싱
-        :return:
-        '''
-
-        articles = []
-        for page_no in range(1, 10):
-            try:
-                soup = self.get_data_http_usa(page_no)
-                # article_tag = soup.findAll('a', class_='content-feed__card-title-link')
-                article_tag = soup.findAll('a', class_='jupiter22-c-article-list__item_title')
-
-                for article in article_tag:
-                    articles.append(article.text)
-            except:
-                continue
-
-        for article in articles:
-            try:
-                ticker = article.split('(', 1)[1].split(')')[0]
-                if len(ticker) > 4:
-                    continue
-
-                # 해당코드가 이미 분석한 결과가 있는지 여부 체크
-                if self.is_exists(ticker, 'US'):
-                    continue
-
-                self.get_company_info_usa(ticker, article)
-                # if os_type == 'Windows':
-                #     break
-            except:
-                continue
-
-    def get_company_info_usa(self, ticker, article):
-        '''
-        USA ticker에 해당하는 기업 정보 가져오기
-        :param ticker:
-        :return:
-        '''
-        url = "https://www.nasdaq.com/market-activity/stocks/{}".format(ticker.lower())
-        headers = {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/84.0.4147.135 Safari/537.36'
-        }
-        res = requests.get(url, headers=headers)
-        content_type = res.headers['content-type']
-        if not 'charset' in content_type:
-            res.encoding = res.apparent_encoding
-
-        soup = BeautifulSoup(res.text, 'lxml')
-
-        company_name = soup.find("span", attrs={"class": "symbol-page-header__name"}).text.strip()
-
-        # price = soup.find('div', {'class': 'symbol-page-header__pricing-price'}).text.strip()
-        # company_info = soup.find('div', {'class': 'symbol-page-header__description'}).text.strip()
-
-        logger.info("Company: {}".format(company_name))
-        report = ''
-        report = (lambda x: '' if x is None or x == '' else x)(self.get_exists_report(ticker, 'US'))
-        if len(report) == 0:
-            if IS_GPT:
-                # report = self.get_company_report_usa(ticker, company_name)
-                report = self.get_company_report_usa2(ticker, company_name, article)
-                logger.info("Summary-GPT: {}".format(report))
-            else:
-                report = ''
-        else:
-            logger.info("Summary-DB: {}".format(report))
-        self.total_article_us.append([ticker, self.date, self.time, article, company_name, report])
-
-    def truncate_sentence(self, sentence: str, num_tokens: int) -> str:
-        '''
-        주어진 토큰 수로 자르기
-        :param sentence:
-        :param num_tokens:
-        :return:
-        '''
-        # Split the sentence into tokens
-        tokens = sentence.split()
-
-        # Check if the sentence is already shorter than the desired length
-        if len(tokens) <= num_tokens:
-            return sentence
-
-        # Truncate the sentence by removing the last tokens
-        truncated_tokens = tokens[:num_tokens]
-
-        # Join the truncated tokens back into a sentence
-        truncated_sentence = ' '.join(truncated_tokens)
-
-        # Add ellipsis if the original sentence was longer than the truncated sentence
-        if len(tokens) > num_tokens:
-            truncated_sentence += '...'
-
-        return truncated_sentence
-
-    def get_company_report_usa(self, ticker, company_name):
-        '''
-        USA 기업 리포트 요약 - 사용하지 않음
-        :param ticker:
-        :return:
-        '''
-        try:
-            # 보고서 종류와 url을 지정합니다.
-            report_type = "10-K"
-            url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type={report_type}&dateb=&owner=exclude&count=40"
-            headers = {
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                              'Chrome/84.0.4147.135 Safari/537.36'
-            }
-            # url에서 보고서 링크를 가져옵니다.
-            response = requests.get(url, headers=headers)
-            soup = BeautifulSoup(response.content, "html.parser")
-            table = soup.find("table", {"class": "tableFile2"})
-            rows = table.findAll("tr")
-            document_link = ""
-            for row in rows:
-                cells = row.findAll("td")
-                if len(cells) > 3 and report_type in cells[0].text:
-                    document_link = "https://www.sec.gov" + cells[1].a["href"]
-                    break
-
-            # 보고서 링크에서 텍스트 데이터를 가져옵니다.
-            response = requests.get(document_link, headers=headers)
-            soup = BeautifulSoup(response.content, "html.parser")
-            table = soup.find("table", {"class": "tableFile"})
-            rows = table.findAll("tr")
-            document_link = ""
-            for row in rows:
-                cells = row.findAll("td")
-                find_word = 'ix?doc=/'
-                if len(cells) > 1 and report_type in cells[1].text:
-                    document_link = "https://www.sec.gov" + cells[2].a["href"]
-                    document_link = document_link.replace(find_word, '')
-                    break
-
-            response = requests.get(document_link, headers=headers)
-            soup = BeautifulSoup(response.content, "html.parser")
-            document = soup.find("body").get_text()
-
-            # 텍스트 전처리를 수행합니다.
-            document = re.sub(r"\n", " ", document)  # 개행문자 제거
-            document = re.sub(r"\s+", " ", document)  # 여러 개의 공백을 하나의 공백으로 변경
-
-            delimiter = 'FORM 10-K'
-            document_parts = document.split(delimiter)
-            document = document_parts[1]
-            # 가져온 텍스트 데이터를 출력합니다.
-            # print(text_data)
-
-            document = re.sub('[^A-Za-z0-9가-힣ㄱ-ㅎㅏ-ㅣ\\s]+', '', document)
-
-            # Set the maximum sequence length
-            max_length = 1024
-
-            # Decode the tokenized input
-            modified_text = self.truncate_sentence(document, max_length)
-            prompt = f"The following text is part of the {company_name} report. Please summarize the main business aspects of this company using bullet points in 3 to 4 sentences or less:\n\n" + modified_text
-            # result = self.chatGPT(prompt, YOUR_API_KEY)
-            result = self.callBard(prompt)
-            result_list = result.split('\n\n')
-            if len(result_list) > 0:
-                return result_list[-1].strip()
-            else:
-                return result
-        except Exception as ex:
-            logger.info(f'unable to summarize the company report. : {ex}')
-            return 'unable to summarize the company report.'
-
-    def get_company_report_usa2(self, ticker, company_name, article):
-        try:
-            # prompt = f"The following text is {company_name}'s article today. {article}. Please summarize the main business aspects of this company using bullet points in 3 to 4 sentences"
-            prompt = f"다음 문장은 나스닥 상장사 {company_name}의 오늘 뉴스 타이틀 입니다. {article}. 이 회사의 간단한 소개 및 현재 상황을 문장 기호를 사용하여 5문장 이내로 알려 주세요. (물론입니다.는 생략 해 주세요)"
-            # result = self.chatGPT(prompt, YOUR_API_KEY)
-            result = self.callBard(prompt)
-            return result
-        except Exception as ex:
-            logger.info(f'unable to summarize the company report. : {ex}')
-            return 'unable to summarize the company report.'
-
-    def nlp_article_usa(self):
-        '''
-        USA 기사 감성분석
-        :return:
-        '''
-
-        # Instantiate the sentiment intensity analyzer
-        vader = SentimentIntensityAnalyzer()
-
-        # Set column names
-        columns = ['ticker', 'date_', 'time_', 'headline', 'company_name', 'report_']
-
-        # Convert the parsed_news list into a DataFrame called 'parsed_and_scored_news'
-        parsed_and_scored_news = pd.DataFrame(self.total_article_us, columns=columns)
-
-        # Iterate through the headlines and get the polarity scores using vader
-        scores = parsed_and_scored_news['headline'].apply(vader.polarity_scores).tolist()
-
-        # Convert the 'scores' list of dicts into a DataFrame
-        scores_df = pd.DataFrame(scores)
-
-        # Join the DataFrames of the news and the list of dicts
-        parsed_and_scored_news = parsed_and_scored_news.join(scores_df, rsuffix='_right')
-
-        # Convert the date column from string to datetime
-        # parsed_and_scored_news['date_'] = pd.to_datetime(parsed_and_scored_news.date_).dt.date
-
-        # logger.info(parsed_and_scored_news.info())
-
-        # parsed_and_scored_news = parsed_and_scored_news[columns]
-
-        # logger.info(parsed_and_scored_news.values.tolist())
-
-        # parsed_and_scored_news.to_sql('prediction_pn_us', schema="HDBOWN", con=self.conn, if_exists='append', index=False)
-        self.cursor.executemany("insert into HDBOWN.prediction_pn_us (ticker, date_, time_, headline, company_name, report_, neg, neu, pos, compound) values (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10)", parsed_and_scored_news.values.tolist())
-        self.conn.commit()
-        logger.info(f'USA DB SAVE : {len(parsed_and_scored_news)}')
-
-
-    def get_negative_word(self):
-        '''
-        (KOR)
-        DB에 등록된 부정어 가져오기(현재 사용하지 않음)
-        :return:
-        '''
-
-        sql = 'select nag_word, lang from nag_word'
-        self.negative_word_df = pd.read_sql(sql, self.conn)
-
-    def read_data(self, filename):
-        '''
-        (KOR)
-        영화리뷰 감성분석 모델 활용을 위한 전처리
-        :param filename:
-        :return:
-        '''
-        with open(filename, 'r', encoding='utf-8') as f:
-            data = [line.split('\t') for line in f.read().splitlines()]
-            # txt 파일의 헤더(id document label)는 제외하기
-            data = data[1:]
-        return data
-
-    def tokenize(self, doc):
-        '''
-        (KOR)
-        영화리뷰 감성분석 모델 활용을 위한 전처리
-        :param doc:
-        :return:
-        '''
-        # norm은 정규화, stem은 근어로 표시하기를 나타냄
-        return ['/'.join(t) for t in self.okt.pos(doc, norm=True, stem=True)]
-
-    def make_docs_from_json(self):
-        '''
-        (KOR)
-        영화리뷰 감성분석 모델 활용을 위한 전처리
-        :return:
-        '''
-        if os.path.isfile('./resource/train_docs.json'):
-            with open('./resource/train_docs.json', encoding='utf-8') as f:
-                self.train_docs = json.load(f)
-            with open('./resource/test_docs.json', encoding='utf-8') as f:
-                self.test_docs = json.load(f)
-        else:
-            self.train_docs = [(self.tokenize(row[1]), row[2]) for row in self.train_data]
-            self.test_docs = [(self.tokenize(row[1]), row[2]) for row in self.test_data]
-            # JSON 파일로 저장
-            with open('./resource/train_docs.json', 'w', encoding="utf-8") as make_file:
-                json.dump(self.train_docs, make_file, ensure_ascii=False, indent="\t")
-            with open('./resource/test_docs.json', 'w', encoding="utf-8") as make_file:
-                json.dump(self.test_docs, make_file, ensure_ascii=False, indent="\t")
-
-    def term_frequency(self, doc):
-        '''
-        (KOR)
-        영화리뷰 감성분석 모델 활용을 위한 전처리
-        :param doc:
-        :return:
-        '''
-        return [doc.count(word) for word in self.selected_words]
-
-    def predict_pos_neg(self, review):
-        '''
-        (KOR)
-        영화리뷰 감성분석 모델 활용 감성 분석 실행
-        :param review:
-        :return:
-        '''
-        result_list = []
-        token = self.tokenize(review)
-        tf = self.term_frequency(token)
-        data = np.expand_dims(np.asarray(tf).astype('float32'), axis=0)
-        score = float(self.model.predict(data))
-        if (score > 0.5):
-            #logger.info("[{}]는 {:.2f}% 확률로 긍정 리뷰이지 않을까 추측해봅니다.^^\n".format(review, score * 100))
-            result_ratio = ('{:.2f}'.format(score * 100))
-            #review 내용이 부정어에 포함되어 있으면 'N'으로 저장
-            result_PN = self.apply_rule_keyword('P', review)
-            result_list = [result_PN, result_ratio]
-        else:
-            #logger.info("[{}]는 {:.2f}% 확률로 부정 리뷰이지 않을까 추측해봅니다.^^;\n".format(review, (1 - score) * 100))
-            result_ratio = ('{:.2f}'.format((1 - score) * 100))
-            # review 내용이 부정어에 포함되어 있지 않으면 'C'로 저장
-            result_PN = self.apply_rule_keyword('N', review)
-            result_list = [result_PN, result_ratio]
-
-        return result_list
-
-    def apply_rule_keyword(self, currentPN, content):
-        '''
-        (KOR)
-        영화리뷰 감성분석 모델 결과로 정의된 부정어로 긍/부정 후처리(현재 사용하지 않음)
-        :param currentPN:
-        :param content:
-        :return:
-        '''
-        str_result = ''
-        if self.negative_word_df.size > 0:
-            for i, row in self.negative_word_df.iterrows():
-                nag_word = str(row['nag_word'])
-                if currentPN == 'P':
-                    if nag_word in content:
-                        str_result = 'N'
-                        break
-                    else:
-                        str_result = 'P'
-                else:
-                    if nag_word in content:
-                        str_result = 'N'
-                        break
-                    else:
-                        str_result = 'C'
-        else:
-            str_result = currentPN
-        return str_result
-
     def get_stock_df(self):
         '''
         (KOR)
@@ -619,35 +229,6 @@ class Main():
 
                     article = article.replace('-', '')
 
-                    ## chatGPT 감성분석 part
-                    chatresult = ''
-
-                    if IS_GPT:
-                        # ChatGPT result
-                        prompt = article + ' 이 문장이 긍정문이야? 부정문이야?'
-
-                        # 파파고 번역 추가
-                        prompt = self.trans_papago(prompt)
-
-                        # result_gpt_txt = self.chatGPT(prompt).strip()
-                        result_gpt_txt = self.callBard(prompt).strip()
-
-                        # 긍/부정 결과 판단
-                        chatresult = self.get_result_pn(result_gpt_txt)
-                    else:
-                        chatresult = self.get_result_pn(article)
-
-                    self.stock_data_dict['gpt_pn'].append(chatresult)
-
-                    logger.info(f'openai result : {chatresult}')
-
-                    ## 영화리뷰 모델 활용 감성분석 part
-                    result_list = self.predict_pos_neg(article)
-
-                    ## 분석 결과 후처리
-                    pn = result_list[0]
-                    ratio = result_list[1]
-
                     stock_info_df = self.get_stock_info_df(stock_code)
                     for i, row in stock_info_df.iterrows():
                         close = (lambda x: 0 if x is None or x == 0 else x)(row['close'])
@@ -665,8 +246,9 @@ class Main():
                     self.stock_data_dict['code'].append(stock_code)
                     self.stock_data_dict['name'].append(stock_name)
                     self.stock_data_dict['content'].append(article)
-                    self.stock_data_dict['pn'].append(pn)
-                    self.stock_data_dict['ratio'].append(float(ratio))
+                    self.stock_data_dict['pn'].append('')
+                    self.stock_data_dict['gpt_pn'].append('')
+                    self.stock_data_dict['ratio'].append(0.0)
 
                     self.stock_data_dict['close'].append(int(close))
                     self.stock_data_dict['diff'].append(int(diff))
@@ -678,89 +260,6 @@ class Main():
                     #logger.info(self.stock_data_dict)
 
                     self.get_stock_info_detail_kor(stock_code, stock_name)
-
-    def chatGPT(self, prompt, API_KEY=YOUR_API_KEY):
-        '''
-        (KOR)
-        ChatGPT 감성분석 실행
-        :param prompt:
-        :param API_KEY:
-        :return:
-        '''
-        time.sleep(self.sleep_time)  # ChatGPT API 호출 타임
-        str_decoded = cryptocode.decrypt(API_KEY, "openai")
-        # set api key
-        openai.api_key = str_decoded
-
-        # Call the chat GPT API
-        try:
-            completion = openai.Completion.create(
-                engine='text-davinci-003'  # 'text-curie-001'  # 'text-babbage-001' #'text-ada-001'
-                , prompt=prompt
-                , temperature=0.5
-                , max_tokens=2096
-                , top_p=0.5
-                , frequency_penalty=0
-                , presence_penalty=0)
-
-            return completion['choices'][0]['text']
-        except Exception as ex:
-            logger.info('ChatGPT 에러가 발생 했습니다')
-            return 'ChatGPT 에러가 발생 했습니다'
-
-    def callBard(self, prompt):
-        '''
-        (KOR)
-        Bard 감성분석 실행
-        :param prompt:
-        :return:
-        '''
-        time.sleep(self.sleep_time)  # API 호출 타임
-        # Call the Bard API
-        try:
-            response = bardapi.core.Bard().get_answer(prompt)['content']
-            return response
-        except Exception as ex:
-            logger.info('Bard 에러가 발생 했습니다.')
-            return 'Bard 에러가 발생 했습니다.'
-
-    def trans_papago(self, content):
-        '''
-        (KOR)
-        파파고 번역 실행
-        :param content:
-        :return: 파파고 일 번역 한도 초과시 content 처리 없이 그대로 return
-        '''
-
-        # 파파고 API URL
-        url = "https://openapi.naver.com/v1/papago/n2mt"
-
-        # 파라미터 설정
-        data = {
-            "source": "ko",
-            "target": "en",
-            "text": content
-        }
-
-        # Header 설정
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "X-Naver-Client-Id": "KOfQjnVLH_96w5zeZOJN",
-            "X-Naver-Client-Secret": "aVDbTdSfVP"
-        }
-
-        try:
-            # POST 요청
-            response = requests.post(url, data=data, headers=headers)
-
-            # 결과 출력
-            result = json.loads(response.text)
-            translated_text = result['message']['result']['translatedText']
-            logger.info(f'파파고 번역 : {translated_text}')
-            return translated_text
-        except Exception as ex:
-            logger.info('파파고 번역시 에러가 발생 했습니다')
-            return content
 
     def is_korean(self, text):
         '''
@@ -800,7 +299,7 @@ class Main():
         else:
             sql = f"select count(*) as cnt from HDBOWN.prediction_pn_us where ticker = '{code}' and date_ = to_char(to_date('{self.date}', 'YYYYMMDD'), 'YYYYMMDD')"
 
-        logger.info(f'already exists check sql : {sql}')
+        # logger.info(f'already exists check sql : {sql}')
         result_df = pd.read_sql(sql, self.conn)
         if result_df.iloc[0, 0] >= 1:
             logger.info(f'code that already exists : {code}')
@@ -1133,38 +632,6 @@ class Main():
         result_gpt_txt = ''
         result_gpt_txt = (lambda x: '' if x is None or x == '' else x)(self.get_exists_report(code, 'KO'))
 
-        if len(result_gpt_txt) == 0:
-            if IS_GPT:
-                try:
-                    # 기업정보Report
-                    object1 = soup.find("div", attrs={"class": "um_bssummary"})
-                    value1 = object1.find('h3')
-                    value2 = object1.find('li')
-
-                    # ChatGPT result
-                    prompt = f"Please summarize the following text using bullet points:\n\n 기업명 : {name}\n\n 기업개요 : {value2}\n\n 현재상황 : {value1}"
-                    logger.info(f'기업정보Report Original: {prompt}')
-                    word_to_check = '동사는'
-                    if word_to_check in prompt:
-                        prompt = prompt.replace(word_to_check, '')
-                    # result_gpt_txt = self.chatGPT(prompt).strip()
-                    result_gpt_txt = self.callBard(prompt).strip()
-
-                    # # 문장 구분을 위한 패턴
-                    # sentence_pattern = re.compile(r'.+?[.?!]')
-                    #
-                    # # 문단을 문장으로 분리
-                    # sentences = sentence_pattern.findall(result_gpt_txt)
-                    # result_gpt_txt = sentences[0].strip()
-
-                    logger.info(f'기업정보Report GPT: {result_gpt_txt}')
-                except Exception as ex:
-                    logger.info(f'기업정보Report 에러!! : {ex}')
-            else:
-                result_gpt_txt = ''
-        else:
-            logger.info(f'기업정보Report DB: {result_gpt_txt}')
-
         self.stock_data_detail_dict['key'].append(self.date + code)
         self.stock_data_detail_dict['date'].append(self.date)
         self.stock_data_detail_dict['code'].append(code)
@@ -1217,8 +684,8 @@ class Main():
             self.conn.commit()
             logger.info('DB저장 완료')
 
-            del_sql1 = "delete from PREDICTION_PN_US where 1=1 and regexp_like(report_, 'Error|에러')"
-            del_sql2 = "delete from PREDICTION_PN where 1=1 and regexp_like(report_, 'Error|에러')"
+            del_sql1 = "delete from HDBOWN.PREDICTION_PN_US where 1=1 and regexp_like(report_, 'Error|에러')"
+            del_sql2 = "delete from HDBOWN.PREDICTION_PN where 1=1 and regexp_like(report_, 'Error|에러')"
 
             self.cursor.execute(del_sql1)
             self.cursor.execute(del_sql2)
